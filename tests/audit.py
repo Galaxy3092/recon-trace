@@ -112,6 +112,26 @@ def run_security_audit():
     else:
         failures.append("PI OS Containment: Missing OS-level containment controls.")
 
+    # 13. Zero External CDN Dependencies (100% Offline Integrity)
+    with open('/home/Galaxy/VSCodium/recon-trace/panel.html') as f:
+        panel_content = f.read()
+    with open('/home/Galaxy/VSCodium/recon-trace/css/style.css') as f:
+        css_content = f.read()
+
+    has_external_cdn = any(cdn in panel_content for cdn in ['https://cdnjs', 'https://cdn.', 'https://unpkg', 'https://fonts.googleapis'])
+    has_css_import = '@import' in css_content
+
+    if not has_external_cdn and not has_css_import:
+        passes.append("Zero External Dependencies: 100% self-contained local assets. Zero third-party CDN tracking.")
+    else:
+        failures.append("External Dependencies: Detected external CDN script/stylesheet reference.")
+
+    # 14. Forensic Dork Stealth Routing
+    if "ReconStealthGuard.openLeadStealth" in app_code and "openLeadStealth(url)" in app_code:
+        passes.append("Dork Stealth Routing: Darknet indexer clicks routed through Stealth Guard to prevent browser history leakage.")
+    else:
+        failures.append("Dork Stealth Routing: Unprotected window.open detected on forensic dork tags.")
+
     # Summary Output
     print(f"\n[+] Passed Security Controls ({len(passes)}/{len(passes) + len(failures)}):")
     for p in passes:
@@ -123,7 +143,7 @@ def run_security_audit():
             print(f"  🔴 {fail}")
         return False
     else:
-        print("\n🏆 ALL 12/12 ADVANCED OPSEC, ANTI-INTERCEPTION & PI AIR-GAP AUDITS PASSED 100%!")
+        print(f"\n🏆 ALL {len(passes)}/{len(passes)} ADVANCED OPSEC, ANTI-INTERCEPTION & PI AIR-GAP AUDITS PASSED 100%!")
         return True
 
 if __name__ == '__main__':

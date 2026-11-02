@@ -48,7 +48,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const thresholdSlider = document.getElementById('threshold-slider');
   const thresholdValBadge = document.getElementById('threshold-val-badge');
   const matchCounter = document.getElementById('match-counter');
-  const categoryChips = document.querySelectorAll('.chip');
+  const categoryChips = document.querySelectorAll('.category-pills .pill, .pill, .chip');
 
   const resultsEmptyState = document.getElementById('results-empty-state');
   const resultsList = document.getElementById('results-list');
@@ -72,13 +72,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   const customEngCat = document.getElementById('custom-eng-cat');
   const customEngUrl = document.getElementById('custom-eng-url');
 
-  // Drawer 2 Elements
+  // Tab 3: API Elements
   const apiGeminiKey = document.getElementById('api-gemini-key');
   const apiModelSelect = document.getElementById('api-model-select');
   const apiCustomEndpoint = document.getElementById('api-custom-endpoint');
   const btnSaveApiSettings = document.getElementById('btn-save-api-settings');
 
-  // Drawer 3 Elements
+  // Tab 4: Settings Elements
   const torHostInput = document.getElementById('tor-host');
   const torPortInput = document.getElementById('tor-port');
   const toggleTorProxy = document.getElementById('toggle-tor-proxy');
@@ -145,7 +145,16 @@ document.addEventListener('DOMContentLoaded', async () => {
         try {
           const resp = await fetch(data.recontrace_pending_search_url);
           const blob = await resp.blob();
-          const cleanName = new URL(data.recontrace_pending_search_url).pathname.split('/').pop() || 'Context_Target';
+          let cleanName = 'Context_Target';
+          try {
+            if (data.recontrace_pending_search_url.startsWith('data:')) {
+              cleanName = 'Pasted_Image_' + new Date().toLocaleTimeString();
+            } else {
+              cleanName = new URL(data.recontrace_pending_search_url).pathname.split('/').pop() || 'Context_Target';
+            }
+          } catch {
+            cleanName = 'Context_Target';
+          }
           caseTitleInput.value = 'Case: ' + cleanName;
           await handleFile(blob);
         } catch (e) {
@@ -266,15 +275,15 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (w > 0 && h > 0) {
         ctx.drawImage(cropImg, x / scaleRatio, y / scaleRatio, w / scaleRatio, h / scaleRatio, x, y, w, h);
 
-        // Reticle borders
-        ctx.strokeStyle = '#06b6d4';
+        // Reticle borders (Utilitarian Crimson)
+        ctx.strokeStyle = '#dc2626';
         ctx.lineWidth = 2;
         ctx.setLineDash([5, 3]);
         ctx.strokeRect(x, y, w, h);
 
         // Corner markers
         ctx.setLineDash([]);
-        ctx.fillStyle = '#38bdf8';
+        ctx.fillStyle = '#ef4444';
         const markerSize = 6;
         ctx.fillRect(x - 3, y - 3, markerSize, markerSize);
         ctx.fillRect(x + w - 3, y - 3, markerSize, markerSize);
@@ -439,7 +448,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     btnRunTor.disabled = true;
     searchStatusText.textContent = 'Load an image to begin';
 
-    dorksTagsContainer.innerHTML = '<span class="dork-pill placeholder">Keywords will populate when target is analyzed</span>';
+    dorksTagsContainer.innerHTML = '<span class="dork-item placeholder">Keywords will populate when target is analyzed</span>';
     renderResults();
   }
 
@@ -450,15 +459,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     canvas.height = 300;
     const ctx = canvas.getContext('2d');
 
-    // Cool gradient background
+    // Charcoal background
     const grad = ctx.createLinearGradient(0, 0, 300, 300);
-    grad.addColorStop(0, '#1e293b');
-    grad.addColorStop(1, '#0f172a');
+    grad.addColorStop(0, '#1e1e1e');
+    grad.addColorStop(1, '#262626');
     ctx.fillStyle = grad;
     ctx.fillRect(0, 0, 300, 300);
 
     // Frame drawing
-    ctx.strokeStyle = '#38bdf8';
+    ctx.strokeStyle = '#991b1b';
     ctx.lineWidth = 8;
     ctx.beginPath();
     ctx.arc(80, 200, 40, 0, Math.PI * 2);
@@ -469,7 +478,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     ctx.stroke();
 
     // Triangle frame
-    ctx.strokeStyle = '#f59e0b';
+    ctx.strokeStyle = '#d97706';
     ctx.lineWidth = 6;
     ctx.beginPath();
     ctx.moveTo(80, 200);
@@ -484,12 +493,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     ctx.font = 'bold 13px monospace';
     ctx.fillText('SN: TRK-98214-X', 85, 270);
 
-    ctx.fillStyle = '#cbd5e1';
+    ctx.fillStyle = '#f0f0f0';
     ctx.font = 'bold 12px sans-serif';
-    ctx.fillText('EVIDENCE #8902 - STOLEN TREK BIKE', 35, 45);
+    ctx.fillText('EVIDENCE #8902 - STOLEN TREK BIKE', 25, 45);
 
     canvas.toBlob(async (blob) => {
-      caseTitleInput.value = 'Case #8902: Stolen Trek Blue Frame';
+      caseTitleInput.value = 'Case #8902: Stolen Trek Frame';
       await handleFile(blob);
     }, 'image/png');
   }
@@ -498,7 +507,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Forensic Analysis & Dork Generation
   // ==========================================
   async function triggerForensicAnalysis() {
-    dorksTagsContainer.innerHTML = '<span class="dork-pill">Extracting forensic markers...</span>';
+    dorksTagsContainer.innerHTML = '<span class="dork-item">Extracting forensic markers...</span>';
     
     const analysis = await ReconVision.analyzeImage(state.targetImgSrc, 'stolen_or_missing');
     state.dorks = analysis.searchDorks || [];
@@ -509,19 +518,23 @@ document.addEventListener('DOMContentLoaded', async () => {
   function renderDorks() {
     dorksTagsContainer.innerHTML = '';
     if (!state.dorks || state.dorks.length === 0) {
-      dorksTagsContainer.innerHTML = '<span class="dork-pill placeholder">No dorks generated</span>';
+      dorksTagsContainer.innerHTML = '<span class="dork-item placeholder">No dorks generated</span>';
       return;
     }
 
     state.dorks.forEach(dork => {
       const span = document.createElement('span');
-      span.className = 'dork-pill';
+      span.className = 'dork-item';
       span.textContent = dork;
-      span.title = 'Click to search darknet indexer for this term';
+      span.title = 'Click to search darknet indexer for this term (Stealth Open)';
       span.style.cursor = 'pointer';
-      span.addEventListener('click', () => {
+      span.addEventListener('click', async () => {
         const url = `https://ahmia.fi/search/?q=${encodeURIComponent(dork)}`;
-        window.open(url, '_blank');
+        if (typeof ReconStealthGuard !== 'undefined') {
+          await ReconStealthGuard.openLeadStealth(url);
+        } else {
+          window.open(url, '_blank', 'noopener,noreferrer');
+        }
       });
       dorksTagsContainer.appendChild(span);
     });
@@ -618,7 +631,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     btnRunTor.disabled = true;
     torLatencyBadge.textContent = '🧅 Tor: Sweeping Hidden Services...';
-    torLatencyBadge.style.color = '#c084fc';
+    torLatencyBadge.style.color = '#f87171';
     torBadge.className = 'status-pill status-active-tor';
     torBadge.textContent = '🧅 Tor: Searching';
 
@@ -994,7 +1007,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 
   // ==========================================
-  // Drawer 2: API Settings
+  // Tab 3: API Settings
   // ==========================================
   async function loadStoredApiSettings() {
     const s = await ReconVision.getSettings();
@@ -1013,7 +1026,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 
   // ==========================================
-  // Drawer 3: OPSEC, Tor & Export Handlers
+  // Tab 4: Settings & OPSEC Handlers
   // ==========================================
   function setupOPSECHandlers() {
     // Tor Auto-Detection

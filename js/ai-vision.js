@@ -156,7 +156,7 @@ Do not include markdown backticks or any other text, output raw JSON only.`;
     // Basic image measurement
     return {
       engineUsed: 'Local Heuristic (Offline Mode)',
-      summary: 'Image indexed locally. Add an optional free Gemini API key in Tab 2 for deep AI feature extraction.',
+      summary: 'Image indexed locally. Add an optional free Gemini API key in the API tab for deep AI feature extraction.',
       category: caseType,
       distinguishingFeatures: [
         'Visual fingerprint generated',
@@ -174,4 +174,10 @@ Do not include markdown backticks or any other text, output raw JSON only.`;
 
 if (typeof window !== 'undefined') {
   window.ReconVision = ReconVision;
+}
+if (typeof globalThis !== 'undefined') {
+  globalThis.ReconVision = ReconVision;
+}
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = ReconVision;
 }
