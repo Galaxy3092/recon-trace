@@ -60,13 +60,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   const torBadge = document.getElementById('tor-badge');
   const torLatencyBadge = document.getElementById('tor-latency-badge');
 
-  // Bottom Nav & Drawers
-  const navTabBtns = document.querySelectorAll('.nav-tab-btn');
-  const drawers = document.querySelectorAll('.drawer-modal');
-  const btnCloseDrawers = document.querySelectorAll('.btn-close-drawer');
+  // uBlock Tabs
+  const tabBtns = document.querySelectorAll('.tab-btn');
+  const tabPages = document.querySelectorAll('.tab-page');
 
-  // Drawer 1 Elements
-  const engineSettingsList = document.getElementById('engine-settings-list');
+  // Filter Tab Elements
+  const filterTreeContainer = document.getElementById('filter-tree-container');
+  const filterTotalCount = document.getElementById('filter-total-count');
   const btnAddCustomEngine = document.getElementById('btn-add-custom-engine');
   const customEngName = document.getElementById('custom-eng-name');
   const customEngCat = document.getElementById('custom-eng-cat');
@@ -109,13 +109,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   // ==========================================
   async function init() {
     state.engines = await ReconEngines.getEngines();
-    renderEngineSettingsList();
+    renderFilterTree();
     loadStoredApiSettings();
     loadStoredTorSettings();
 
     setupImageHandlers();
     setupThresholdHandlers();
-    setupDrawerHandlers();
+    setupTabHandlers();
     setupSearchHandlers();
     setupTorHandlers();
     setupOPSECHandlers();
@@ -787,76 +787,164 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   // ==========================================
-  // Drawer Toggling & Bottom Navigation
+  // uBlock Tabs: Panel | Filter | API | Settings
   // ==========================================
-  function setupDrawerHandlers() {
-    navTabBtns.forEach(btn => {
+  function setupTabHandlers() {
+    tabBtns.forEach(btn => {
       btn.addEventListener('click', () => {
-        const targetDrawerId = btn.dataset.drawer;
-        const targetDrawer = document.getElementById(targetDrawerId);
-        const isCurrentlyOpen = !targetDrawer.classList.contains('hidden');
+        const targetId = btn.dataset.tab;
+        tabBtns.forEach(b => b.classList.remove('active'));
+        tabPages.forEach(p => p.classList.add('hidden'));
 
-        // Close all drawers
-        drawers.forEach(d => d.classList.add('hidden'));
-
-        if (!isCurrentlyOpen) {
-          targetDrawer.classList.remove('hidden');
-        }
-      });
-    });
-
-    btnCloseDrawers.forEach(btn => {
-      btn.addEventListener('click', () => {
-        drawers.forEach(d => d.classList.add('hidden'));
+        btn.classList.add('active');
+        const targetPage = document.getElementById(targetId);
+        if (targetPage) targetPage.classList.remove('hidden');
       });
     });
   }
 
   // ==========================================
-  // Drawer 1: Engine Customization (XSS-Safe)
+  // TAB 2: Filter Lists (uBlock Tree View)
   // ==========================================
-  function renderEngineSettingsList() {
-    engineSettingsList.innerHTML = '';
-    state.engines.forEach(eng => {
-      const div = document.createElement('div');
-      div.className = 'engine-item';
+  function renderFilterTree() {
+    if (!filterTreeContainer) return;
+    filterTreeContainer.innerHTML = '';
 
-      const info = document.createElement('div');
-      info.className = 'engine-item-info';
+    const categories = [
+      { id: 'general_reverse', name: 'General Visual Search Engines' },
+      { id: 'missing_persons', name: 'Humanitarian & Missing Persons Registries' },
+      { id: 'stolen_goods', name: 'Stolen Property, Vehicles & Marketplaces' }
+    ];
 
-      const h5 = document.createElement('h5');
-      h5.textContent = eng.name;
-      if (eng.isCustom) {
-        const customBadge = document.createElement('span');
-        customBadge.style.color = '#06b6d4';
-        customBadge.textContent = ' (Custom)';
-        h5.appendChild(customBadge);
-      }
+    let totalEnabled = 0;
+    let totalCount = state.engines.length;
 
-      const p = document.createElement('p');
-      p.textContent = eng.desc || '';
+    categories.forEach(cat => {
+      const groupEngines = state.engines.filter(e => e.category === cat.id);
+      if (groupEngines.length === 0) return;
 
-      info.appendChild(h5);
-      info.appendChild(p);
+      const groupDiv = document.createElement('div');
+      groupDiv.className = 'filter-group';
 
-      const toggleWrapper = document.createElement('div');
-      toggleWrapper.className = 'engine-item-toggle';
+      const enabledInGroup = groupEngines.filter(e => e.enabled).length;
+      totalEnabled += enabledInGroup;
 
-      const checkbox = document.createElement('input');
-      checkbox.type = 'checkbox';
-      checkbox.id = `toggle_${eng.id}`;
-      checkbox.checked = Boolean(eng.enabled);
+      // Group Header (uBlock Style)
+      const header = document.createElement('div');
+      header.className = 'filter-group-header';
 
-      checkbox.addEventListener('change', async (e) => {
-        state.engines = await ReconEngines.toggleEngine(eng.id, e.target.checked);
+      const left = document.createElement('div');
+      left.className = 'group-left';
+      const titleSpan = document.createElement('span');
+      titleSpan.textContent = cat.name;
+      left.appendChild(titleSpan);
+
+      const countBadge = document.createElement('span');
+      countBadge.className = 'badge-subtle';
+      countBadge.textContent = `${enabledInGroup}/${groupEngines.length}`;
+
+      header.appendChild(left);
+      header.appendChild(countBadge);
+      groupDiv.appendChild(header);
+
+      // Group Items
+      const itemsContainer = document.createElement('div');
+      itemsContainer.className = 'filter-group-items';
+
+      groupEngines.forEach(eng => {
+        const row = document.createElement('div');
+        row.className = 'filter-row';
+
+        const labelGroup = document.createElement('label');
+        labelGroup.className = 'filter-label-group';
+
+        const cb = document.createElement('input');
+        cb.type = 'checkbox';
+        cb.checked = Boolean(eng.enabled);
+        cb.addEventListener('change', async (e) => {
+          state.engines = await ReconEngines.toggleEngine(eng.id, e.target.checked);
+          renderFilterTree();
+        });
+
+        const nameSpan = document.createElement('span');
+        nameSpan.textContent = eng.name;
+        if (eng.isCustom) {
+          nameSpan.textContent += ' (Custom)';
+        }
+
+        labelGroup.appendChild(cb);
+        labelGroup.appendChild(nameSpan);
+
+        const descSpan = document.createElement('span');
+        descSpan.className = 'filter-meta-desc';
+        descSpan.textContent = eng.desc || '';
+
+        row.appendChild(labelGroup);
+        row.appendChild(descSpan);
+        itemsContainer.appendChild(row);
       });
 
-      toggleWrapper.appendChild(checkbox);
-      div.appendChild(info);
-      div.appendChild(toggleWrapper);
-
-      engineSettingsList.appendChild(div);
+      groupDiv.appendChild(itemsContainer);
+      filterTreeContainer.appendChild(groupDiv);
     });
+
+    // Custom Filters Group
+    const customEngines = state.engines.filter(e => e.isCustom);
+    if (customEngines.length > 0) {
+      const customGroup = document.createElement('div');
+      customGroup.className = 'filter-group';
+
+      const header = document.createElement('div');
+      header.className = 'filter-group-header';
+      header.textContent = `My Custom Filter Targets (${customEngines.length})`;
+      customGroup.appendChild(header);
+
+      const itemsContainer = document.createElement('div');
+      itemsContainer.className = 'filter-group-items';
+
+      customEngines.forEach(eng => {
+        const row = document.createElement('div');
+        row.className = 'filter-row';
+
+        const labelGroup = document.createElement('label');
+        labelGroup.className = 'filter-label-group';
+
+        const cb = document.createElement('input');
+        cb.type = 'checkbox';
+        cb.checked = Boolean(eng.enabled);
+        cb.addEventListener('change', async (e) => {
+          state.engines = await ReconEngines.toggleEngine(eng.id, e.target.checked);
+          renderFilterTree();
+        });
+
+        const nameSpan = document.createElement('span');
+        nameSpan.textContent = eng.name;
+
+        labelGroup.appendChild(cb);
+        labelGroup.appendChild(nameSpan);
+
+        const removeBtn = document.createElement('button');
+        removeBtn.className = 'btn-micro';
+        removeBtn.textContent = 'Delete';
+        removeBtn.addEventListener('click', async () => {
+          if (confirm(`Remove custom filter "${eng.name}"?`)) {
+            state.engines = await ReconEngines.removeEngine(eng.id);
+            renderFilterTree();
+          }
+        });
+
+        row.appendChild(labelGroup);
+        row.appendChild(removeBtn);
+        itemsContainer.appendChild(row);
+      });
+
+      customGroup.appendChild(itemsContainer);
+      filterTreeContainer.appendChild(customGroup);
+    }
+
+    if (filterTotalCount) {
+      filterTotalCount.textContent = `${totalEnabled} of ${totalCount} targets enabled`;
+    }
   }
 
   btnAddCustomEngine.addEventListener('click', async () => {
@@ -884,7 +972,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     };
 
     state.engines = await ReconEngines.addCustomEngine(newEngine);
-    renderEngineSettingsList();
+    renderFilterTree();
 
     customEngName.value = '';
     customEngUrl.value = '';

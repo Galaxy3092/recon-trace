@@ -4,72 +4,82 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="referrer" content="no-referrer">
-  <title>ReconTrace - Humanitarian Visual OSINT</title>
+  <title>ReconTrace</title>
   <link rel="stylesheet" href="css/style.css">
 </head>
-<body class="theme-dark">
-  <div class="app-container">
-    
-    <!-- Top Header -->
-    <header class="app-header">
-      <div class="header-brand">
-        <span class="brand-icon">🎯</span>
-        <div class="brand-text">
-          <h1>RECONTRACE</h1>
-          <span class="sub-brand">Humanitarian Visual OSINT</span>
+<body class="ublock-theme">
+  <div class="ublock-container">
+
+    <!-- Header -->
+    <header class="ublock-header">
+      <div class="header-left">
+        <span class="ublock-shield">🛡️</span>
+        <div class="title-group">
+          <h1>ReconTrace</h1>
+          <span class="version-tag">v1.0.0</span>
         </div>
       </div>
       <div class="header-status">
-        <span id="surface-badge" class="status-pill status-ready">🌐 Surface: Ready</span>
-        <span id="tor-badge" class="status-pill status-standby">🧅 Tor: Standby</span>
-        <span id="vault-badge" class="status-pill status-vault-locked" title="Zero-Knowledge AES-256 Vault Status">🔒 Vault: Setup</span>
+        <span id="surface-badge" class="status-pill status-ready">Surface</span>
+        <span id="tor-badge" class="status-pill status-standby">Tor: Off</span>
+        <span id="vault-badge" class="status-pill status-vault-locked" title="Zero-Knowledge AES-256 Vault Status">Vault</span>
       </div>
     </header>
 
-    <!-- Main Investigation Workspace -->
-    <main class="main-content">
+    <!-- Navigation Tabs: Panel | Filter | API | Settings -->
+    <nav class="ublock-tabs">
+      <button class="tab-btn active" data-tab="tab-panel">Panel</button>
+      <button class="tab-btn" data-tab="tab-filter">Filter</button>
+      <button class="tab-btn" data-tab="tab-api">API</button>
+      <button class="tab-btn" data-tab="tab-settings">Settings</button>
+    </nav>
+
+    <!-- ========================================================
+         TAB 1: PANEL (Main Investigation Workspace)
+         ======================================================== -->
+    <div id="tab-panel" class="tab-page active">
       
       <!-- Target Image Card -->
-      <section class="card target-section">
-        <div class="section-title-row">
-          <h2>🎯 Target Subject / Evidence</h2>
-          <button id="btn-load-sample" class="btn-text" title="Load sample case to test">Load Demo Sample</button>
+      <section class="ub-section">
+        <div class="section-header">
+          <h2>Target Subject / Evidence</h2>
+          <button id="btn-load-sample" class="btn-link" title="Load sample case to test">Load Demo Sample</button>
         </div>
 
-        <!-- Drop Zone (when no image is loaded) -->
+        <!-- Drop Zone (when empty) -->
         <div id="drop-zone" class="drop-zone">
           <input type="file" id="file-input" accept="image/*" class="file-hidden">
           <div class="drop-prompt">
             <span class="upload-icon">📁</span>
-            <p><strong>Click to upload</strong>, drag & drop, or paste image (Ctrl+V)</p>
-            <span class="drop-hint">Supports JPG, PNG, WEBP — Missing persons or stolen property</span>
+            <p><strong>Click to select photo</strong>, drop here, or paste clipboard (Ctrl+V)</p>
+            <span class="sub-hint">JPG, PNG, WEBP — Missing person or stolen property</span>
           </div>
         </div>
 
-        <!-- Image Active Preview (hidden initially) -->
+        <!-- Active Preview -->
         <div id="preview-container" class="preview-container hidden">
-          <div class="preview-layout">
-            <div class="preview-img-wrapper">
-              <img id="target-img" src="" alt="Target Subject">
+          <div class="preview-flex">
+            <div class="preview-thumb-box">
+              <img id="target-img" src="" alt="Target Evidence">
             </div>
-            <div class="preview-meta">
-              <div class="meta-row">
+            <div class="preview-details">
+              <div class="field-row">
                 <label>Case Label:</label>
-                <input type="text" id="case-title-input" placeholder="e.g. Case #2026-Missing-JohnDoe" value="Case #001: Active Subject">
+                <input type="text" id="case-title-input" value="Case #001: Active Subject">
               </div>
-              <div class="meta-row">
+              <div class="field-row">
                 <label>Evidence SHA-256:</label>
-                <div class="hash-box">
-                  <span id="img-hash">Computing...</span>
-                  <button id="btn-copy-hash" class="btn-tiny" title="Copy evidence hash">Copy</button>
+                <div class="hash-row">
+                  <span id="img-hash" class="mono-hash">Computing...</span>
+                  <button id="btn-copy-hash" class="btn-micro" title="Copy evidence hash">Copy</button>
                 </div>
               </div>
-              <div class="meta-row" style="margin-top:2px;">
-                <span id="exif-scrubbed-badge" class="badge-tag" style="background:rgba(16,185,129,0.15); color:#34d399; border:1px solid rgba(16,185,129,0.3); font-size:10px;">🛡️ EXIF Metadata Scrubbed (Zero GPS/Device Leak)</span>
+              <div class="meta-badges-row">
+                <span id="exif-scrubbed-badge" class="badge-subtle">🛡️ EXIF Scrubbed (Zero GPS Leak)</span>
               </div>
-              <div class="preview-actions">
-                <button id="btn-crop-img" class="btn-secondary btn-small">✂️ Crop Subject / Marker</button>
-                <button id="btn-clear-img" class="btn-secondary btn-small">Change Photo</button>
+              <div class="preview-btn-row">
+                <button id="btn-crop-img" class="btn-default btn-xs">✂️ Crop Area</button>
+                <button id="btn-clear-img" class="btn-default btn-xs">Change Photo</button>
               </div>
             </div>
           </div>
@@ -77,87 +87,84 @@
       </section>
 
       <!-- Primary Action: Surface Web Scan -->
-      <section class="card action-bar-card">
-        <div class="action-flex">
-          <button id="btn-search-surface" class="btn-primary" disabled>
-            <span class="btn-icon">⚡</span> Run Surface Search (Stage 1)
+      <section class="ub-section action-section">
+        <div class="action-bar-flex">
+          <button id="btn-search-surface" class="btn-action" disabled>
+            <span>⚡ Run Surface Search (Stage 1)</span>
           </button>
-          <span id="search-status-text" class="status-text">Load an image to begin</span>
+          <span id="search-status-text" class="status-indicator">Load a target photo to begin</span>
         </div>
       </section>
 
-      <!-- Similarity Threshold Filter Deck -->
-      <section class="card filter-deck-card">
-        <div class="filter-header">
-          <div class="threshold-label-row">
-            <span class="label-title">Similarity Threshold:</span>
-            <span id="threshold-val-badge" class="threshold-badge">70%</span>
+      <!-- Similarity Threshold Filter Bar -->
+      <section class="ub-section filter-bar-section">
+        <div class="threshold-header">
+          <div class="threshold-label-box">
+            <label>Similarity Threshold:</label>
+            <span id="threshold-val-badge" class="threshold-val">70%</span>
           </div>
-          <span id="match-counter" class="match-count-text">0 matches</span>
+          <span id="match-counter" class="counter-text">0 matches</span>
         </div>
-        
-        <div class="slider-wrapper">
+
+        <div class="slider-row">
           <input type="range" id="threshold-slider" min="30" max="100" value="70" step="1">
-          <div class="slider-ticks">
+          <div class="slider-labels">
             <span>30% (Broad)</span>
             <span>70% (Balanced)</span>
-            <span>90% (Strict Exact)</span>
+            <span>90% (Exact)</span>
           </div>
         </div>
 
-        <!-- Category Filter Chips -->
-        <div class="category-chips">
-          <button class="chip active" data-category="all">All Targets</button>
-          <button class="chip" data-category="general_reverse">Reverse Engines</button>
-          <button class="chip" data-category="missing_persons">Missing Persons</button>
-          <button class="chip" data-category="stolen_goods">Stolen Goods</button>
-          <button class="chip" data-category="tor">🧅 Tor Leads</button>
+        <!-- Category Filter Pills -->
+        <div class="category-pills">
+          <button class="pill active" data-category="all">All Targets</button>
+          <button class="pill" data-category="general_reverse">Reverse Engines</button>
+          <button class="pill" data-category="missing_persons">Missing Persons</button>
+          <button class="pill" data-category="stolen_goods">Stolen Goods</button>
+          <button class="pill" data-category="tor">🧅 Tor Leads</button>
         </div>
       </section>
 
       <!-- Results Feed Section -->
-      <section class="results-section">
-        <div id="results-empty-state" class="empty-state">
-          <div class="empty-icon">🔎</div>
-          <h3>No Search Conducted Yet</h3>
-          <p>Upload a target image above to search verified surface engines and registries.</p>
+      <section class="ub-section results-container">
+        <div id="results-empty-state" class="empty-feed">
+          <p>No search conducted yet. Load a photo above to scan enabled filter engines.</p>
         </div>
 
         <!-- Dynamic Results List -->
         <div id="results-list" class="results-list hidden">
-          <!-- Populated by JavaScript -->
+          <!-- Populated by JavaScript with safe DOM nodes -->
         </div>
       </section>
 
-      <!-- Stage 2: Deep Tor Search Deck (Resource Saver) -->
-      <section class="card tor-tier-card">
-        <div class="tor-card-header">
-          <div class="tor-title-group">
-            <span class="tor-icon">🧅</span>
+      <!-- Stage 2: Deep Tor Search Drawer/Box -->
+      <section class="ub-section tor-stage-section">
+        <div class="tor-section-header">
+          <div class="tor-title-left">
+            <span class="tor-symbol">🧅</span>
             <div>
               <h3>Stage 2: Deep Tor Search</h3>
-              <p class="tor-subtitle">Secondary Tier: Scans darknet indexers, forums & hidden services.</p>
+              <p class="tor-sub">Secondary scan for hidden service indexers & darknet forums.</p>
             </div>
           </div>
-          <span id="tor-latency-badge" class="badge-tag">Resource Saver: Standby</span>
+          <span id="tor-latency-badge" class="badge-subtle">Resource Saver: Standby</span>
         </div>
 
-        <!-- AI Forensic Dorks Preview -->
-        <div class="forensic-dorks-box">
-          <div class="dorks-header">
-            <span>Forensic Search Keywords (AI Bridged):</span>
-            <button id="btn-refresh-dorks" class="btn-tiny" title="Regenerate forensic dorks">Regenerate</button>
+        <!-- Forensic Keywords Box -->
+        <div class="dorks-box">
+          <div class="dorks-top">
+            <label>Forensic Search Keywords (AI Bridged):</label>
+            <button id="btn-refresh-dorks" class="btn-micro" title="Regenerate forensic dorks">Regenerate</button>
           </div>
-          <div id="dorks-tags" class="dorks-tags-container">
-            <span class="dork-pill placeholder">Keywords will populate when target is analyzed</span>
+          <div id="dorks-tags" class="dorks-flex">
+            <span class="dork-item placeholder">Keywords will populate when target is analyzed</span>
           </div>
         </div>
 
-        <!-- Tor Controls -->
-        <div class="tor-controls-row">
-          <label class="toggle-control">
+        <div class="tor-action-bottom">
+          <label class="checkbox-row">
             <input type="checkbox" id="check-auto-escalate">
-            <span class="toggle-label">Auto-escalate to Tor if surface match &lt; 75%</span>
+            <span>Auto-escalate to Tor if surface match &lt; 75%</span>
           </label>
           <button id="btn-run-tor" class="btn-tor" disabled>
             <span>🧅 Run Deep Tor Search</span>
@@ -165,203 +172,219 @@
         </div>
       </section>
 
-    </main>
-
-    <!-- Bottom Sliding Drawer Tabs (Clean Navigation) -->
-    <nav class="bottom-nav">
-      <button class="nav-tab-btn" data-drawer="drawer-targets">
-        <span class="tab-icon">🌐</span>
-        <span class="tab-text">Websites</span>
-      </button>
-      <button class="nav-tab-btn" data-drawer="drawer-apis">
-        <span class="tab-icon">🔑</span>
-        <span class="tab-text">APIs & AI</span>
-      </button>
-      <button class="nav-tab-btn" data-drawer="drawer-controls">
-        <span class="tab-icon">🛡️</span>
-        <span class="tab-text">Controls</span>
-      </button>
-    </nav>
-
-    <!-- Drawer 1: Websites & Custom Engines -->
-    <div id="drawer-targets" class="drawer-modal hidden">
-      <div class="drawer-header">
-        <h3>🌐 Search Targets & Custom Engines</h3>
-        <button class="btn-close-drawer">✕</button>
-      </div>
-      <div class="drawer-body">
-        <p class="drawer-intro">Toggle active search providers or add custom police registries, marketplace URLs, or forum search endpoints.</p>
-        
-        <div class="engine-list" id="engine-settings-list">
-          <!-- Populated dynamically -->
-        </div>
-
-        <div class="custom-engine-box">
-          <h4>+ Add Custom Search Target</h4>
-          <div class="input-group">
-            <input type="text" id="custom-eng-name" placeholder="Target Name (e.g., Regional Police Bulletins)">
-          </div>
-          <div class="input-group">
-            <select id="custom-eng-cat">
-              <option value="missing_persons">Missing Persons Registry</option>
-              <option value="stolen_goods">Stolen Property / Marketplace</option>
-              <option value="general_reverse">General Visual Engine</option>
-            </select>
-          </div>
-          <div class="input-group">
-            <input type="text" id="custom-eng-url" placeholder="Search URL Template with {query} or {img_url}">
-          </div>
-          <button id="btn-add-custom-engine" class="btn-secondary btn-small">Add Custom Target</button>
-        </div>
-      </div>
     </div>
 
-    <!-- Drawer 2: APIs & AI Vision -->
-    <div id="drawer-apis" class="drawer-modal hidden">
-      <div class="drawer-header">
-        <h3>🔑 APIs & Vision Intelligence</h3>
-        <button class="btn-close-drawer">✕</button>
-      </div>
-      <div class="drawer-body">
-        <p class="drawer-intro">Enhance searches with optional free AI Vision to extract tattoos, serial numbers, clothing brands, and build darknet search dorks.</p>
+    <!-- ========================================================
+         TAB 2: FILTER (uBlock Origin Style Filter Lists)
+         ======================================================== -->
+    <div id="tab-filter" class="tab-page hidden">
+      <section class="ub-section">
+        <div class="section-header">
+          <h2>Filter Lists & Search Targets</h2>
+          <span id="filter-total-count" class="badge-subtle">13 targets enabled</span>
+        </div>
+        <p class="section-desc">Enable or disable specific search registries, marketplaces, and reverse engines. You can also add your own custom filter rules.</p>
         
-        <div class="form-card">
-          <label class="form-label">Google Gemini API Key (Free Tier Supported):</label>
-          <input type="password" id="api-gemini-key" placeholder="AIzaSy... (Stored locally)">
-          <span class="field-hint">Used for client-side forensic extraction and OCR. Zero telemetry.</span>
+        <!-- Filter Tree (uBlock Style) -->
+        <div class="filter-tree" id="filter-tree-container">
+          <!-- Populated dynamically: General Reverse, Missing Persons, Stolen Goods, Tor Indexers -->
+        </div>
+      </section>
+
+      <!-- My Filters / Add Custom Search Target -->
+      <section class="ub-section">
+        <div class="section-header">
+          <h2>My Custom Filters</h2>
+        </div>
+        <p class="section-desc">Add a regional police database, local auction site, or forum search template. Strict HTTPS enforced for clearweb.</p>
+
+        <div class="custom-filter-box">
+          <div class="input-grid">
+            <div class="input-cell">
+              <label>Target Name:</label>
+              <input type="text" id="custom-eng-name" placeholder="e.g., Regional Police Bulletins">
+            </div>
+            <div class="input-cell">
+              <label>Category:</label>
+              <select id="custom-eng-cat">
+                <option value="missing_persons">Missing Persons Registry</option>
+                <option value="stolen_goods">Stolen Property / Marketplace</option>
+                <option value="general_reverse">General Reverse Visual</option>
+              </select>
+            </div>
+          </div>
+          <div class="input-cell" style="margin-top:6px;">
+            <label>Search URL Template (use {query} or {img_url}):</label>
+            <input type="text" id="custom-eng-url" placeholder="https://example.org/search?q={query}">
+          </div>
+          <div class="filter-btn-row">
+            <button id="btn-add-custom-engine" class="btn-action btn-sm">Add Custom Filter</button>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- ========================================================
+         TAB 3: API (External APIs & Vision Intelligence)
+         ======================================================== -->
+    <div id="tab-api" class="tab-page hidden">
+      <section class="ub-section">
+        <div class="section-header">
+          <h2>API & Vision Intelligence</h2>
+        </div>
+        <p class="section-desc">Optionally enhance investigation queries with free Gemini Vision AI to automatically read serial numbers, identify clothing, and extract distinguishing marks.</p>
+
+        <div class="form-group">
+          <label class="form-title">Google Gemini API Key (Free Tier Supported):</label>
+          <input type="password" id="api-gemini-key" placeholder="AIzaSy... (Stored locally encrypted in Vault)">
+          <span class="field-note">Used strictly for client-side visual forensic extraction. Zero telemetry.</span>
         </div>
 
-        <div class="form-card">
-          <label class="form-label">AI Model:</label>
+        <div class="form-group">
+          <label class="form-title">Vision Model Selection:</label>
           <select id="api-model-select">
             <option value="gemini-2.0-flash">Gemini 2.0 Flash (Fast & Free)</option>
             <option value="gemini-1.5-flash">Gemini 1.5 Flash</option>
-            <option value="gemini-1.5-pro">Gemini 1.5 Pro (Deep Analysis)</option>
+            <option value="gemini-1.5-pro">Gemini 1.5 Pro (Deep Multimodal Analysis)</option>
           </select>
         </div>
 
-        <div class="form-card">
-          <label class="form-label">Custom OSINT Vision Endpoint (Optional):</label>
+        <div class="form-group">
+          <label class="form-title">Custom OSINT Vision Endpoint (Optional):</label>
           <input type="text" id="api-custom-endpoint" placeholder="https://api.your-org.com/v1/vision">
         </div>
 
-        <button id="btn-save-api-settings" class="btn-primary btn-small">Save API Settings</button>
-      </div>
+        <div class="btn-row-right">
+          <button id="btn-save-api-settings" class="btn-action btn-sm">Save API Settings</button>
+        </div>
+      </section>
     </div>
 
-    <!-- Drawer 3: Controls, OPSEC & Case Management -->
-    <div id="drawer-controls" class="drawer-modal hidden">
-      <div class="drawer-header">
-        <h3>🛡️ OPSEC, Controls & Case Files</h3>
-        <button class="btn-close-drawer">✕</button>
-      </div>
-      <div class="drawer-body">
-        
-        <!-- Tor Proxy Settings -->
-        <div class="form-card">
-          <h4>🧅 Tor Network Routing (SOCKS5)</h4>
-          <p class="field-hint">Route outbound queries through a local Tor instance to mask your real IP and location.</p>
-          <div class="input-row">
-            <div class="input-col">
-              <label>Host:</label>
-              <input type="text" id="tor-host" value="127.0.0.1">
-            </div>
-            <div class="input-col">
-              <label>Port:</label>
-              <input type="number" id="tor-port" value="9050">
-            </div>
+    <!-- ========================================================
+         TAB 4: SETTINGS (OPSEC, Tor, Vault & Case Files)
+         ======================================================== -->
+    <div id="tab-settings" class="tab-page hidden">
+      
+      <!-- Tor Routing Settings -->
+      <section class="ub-section">
+        <div class="section-header">
+          <h2>🧅 Tor Proxy & Anti-Interception</h2>
+        </div>
+        <p class="section-desc">Route search queries through Tor SOCKS5h with remote DNS resolution so local routers and ISPs cannot inspect your queries.</p>
+
+        <div class="tor-port-grid">
+          <div class="input-cell">
+            <label>Host:</label>
+            <input type="text" id="tor-host" value="127.0.0.1">
           </div>
-          <div class="tor-toggle-row">
-            <label class="toggle-control">
-              <input type="checkbox" id="toggle-tor-proxy">
-              <span class="toggle-label">Enable Tor SOCKS5 Proxy Routing</span>
-            </label>
-          </div>
-          <div class="tor-toggle-row" style="margin-top:6px;">
-            <label class="toggle-control">
-              <input type="checkbox" id="toggle-tor-all">
-              <span class="toggle-label" style="color:#e9d5ff; font-weight:600;">🛡️ Total Stealth Shield (Force ALL surface & Tor queries via Tor - Uninterceptable by ISP/Router)</span>
-            </label>
-          </div>
-          <div class="tor-detect-box" style="margin-top:8px;">
-            <button id="btn-detect-tor" class="btn-secondary btn-tiny">🔍 Auto-Detect Local Tor Instance</button>
-            <span id="tor-detect-status" class="field-hint" style="display:block; margin-top:4px;">Checks ports 9050 (System Daemon) & 9150 (Tor Browser)</span>
+          <div class="input-cell">
+            <label>Port:</label>
+            <input type="number" id="tor-port" value="9050">
           </div>
         </div>
 
-        <!-- Zero-Knowledge Cryptographic Vault -->
-        <div class="form-card">
-          <h4>🔒 Zero-Knowledge Cryptographic Vault (AES-256-GCM)</h4>
-          <p class="field-hint">All investigation files, evidence hashes, notes, and API keys are encrypted at rest with PBKDF2 + AES-256-GCM.</p>
-          <div class="vault-status-row" style="margin: 6px 0;">
-            <span id="vault-status-text" class="field-hint" style="color:var(--text-main); font-weight:600;">Status: Checking vault...</span>
-          </div>
-          <div class="action-buttons-row">
-            <button id="btn-vault-action" class="btn-primary btn-small">Set Master Passphrase</button>
-            <button id="btn-lock-vault" class="btn-secondary btn-small hidden">Lock Vault 🔒</button>
-          </div>
+        <div class="checkbox-stack">
+          <label class="checkbox-row">
+            <input type="checkbox" id="toggle-tor-proxy">
+            <span>Enable Tor SOCKS5 Proxy Routing (Zero-DNS-Leak)</span>
+          </label>
+          <label class="checkbox-row highlight-box">
+            <input type="checkbox" id="toggle-tor-all">
+            <span><strong>🛡️ Total Stealth Shield:</strong> Force 100% of Surface Web & Tor traffic through Tor. (Completely uninterceptable by home router / ISP).</span>
+          </label>
         </div>
 
-        <!-- Case Management & Export -->
-        <div class="form-card">
-          <h4>📁 Active Case Dossier</h4>
-          <p class="field-hint">Export verified match leads, timestamps, and image hashes for law enforcement or humanitarian records.</p>
-          <div class="action-buttons-row">
-            <button id="btn-export-dossier" class="btn-secondary btn-small">📄 Export Dossier (Markdown)</button>
-            <button id="btn-export-json" class="btn-secondary btn-small">📦 Export Raw JSON</button>
-          </div>
+        <div class="tor-detect-action">
+          <button id="btn-detect-tor" class="btn-default btn-xs">🔍 Auto-Detect Local Tor Instance</button>
+          <span id="tor-detect-status" class="field-note">Probes ports 9050 (Tor Daemon) & 9150 (Tor Browser)</span>
+        </div>
+      </section>
+
+      <!-- Zero-Knowledge Cryptographic Vault -->
+      <section class="ub-section">
+        <div class="section-header">
+          <h2>🔒 Cryptographic Vault (AES-256-GCM)</h2>
+        </div>
+        <p class="section-desc">Client-side zero-knowledge encryption using PBKDF2 (600,000 iterations) + AES-256-GCM via native Web Crypto API.</p>
+
+        <div class="vault-info-row">
+          <span id="vault-status-text" class="vault-status-label">Status: Checking vault...</span>
         </div>
 
-        <!-- Emergency Wipe -->
-        <div class="form-card danger-card">
-          <h4>⚠️ Emergency Panic Shredder</h4>
-          <p class="field-hint">Permanently overwrite local cases, search history, cached thumbnails, and stored keys in memory immediately.</p>
-          <button id="btn-panic-wipe" class="btn-danger btn-small">🚨 Emergency Shred All Local Data</button>
+        <div class="btn-row-flex">
+          <button id="btn-vault-action" class="btn-action btn-sm">Set Master Passphrase</button>
+          <button id="btn-lock-vault" class="btn-default btn-sm hidden">Lock Vault 🔒</button>
         </div>
+      </section>
 
-      </div>
+      <!-- Case Management & Export -->
+      <section class="ub-section">
+        <div class="section-header">
+          <h2>📁 Case Files & Evidence Export</h2>
+        </div>
+        <p class="section-desc">Export verified leads, timestamps, and evidence hashes into structured investigation dossiers.</p>
+
+        <div class="btn-row-flex">
+          <button id="btn-export-dossier" class="btn-default btn-sm">📄 Export Dossier (Markdown)</button>
+          <button id="btn-export-json" class="btn-default btn-sm">📦 Export Raw JSON</button>
+        </div>
+      </section>
+
+      <!-- Emergency Panic Shredder -->
+      <section class="ub-section danger-section">
+        <div class="section-header">
+          <h2>⚠️ Emergency Panic Shredder</h2>
+        </div>
+        <p class="section-desc">Permanently destroy cryptographic salts, cases, cached thumbnails, and local history immediately.</p>
+        <button id="btn-panic-wipe" class="btn-danger btn-sm">🚨 Shred All Local Data</button>
+      </section>
+
     </div>
 
+    <!-- ========================================================
+         MODALS
+         ======================================================== -->
+    
     <!-- Forensic Crop Modal -->
-    <div id="crop-modal" class="modal-overlay hidden">
-      <div class="crop-modal-content">
-        <div class="drawer-header">
+    <div id="crop-modal" class="modal-backdrop hidden">
+      <div class="ub-modal">
+        <div class="modal-header">
           <h3>✂️ Crop Subject / Forensic Region</h3>
-          <button id="btn-close-crop" class="btn-close-drawer">✕</button>
+          <button id="btn-close-crop" class="modal-close">✕</button>
         </div>
-        <div class="crop-modal-body">
-          <p class="field-hint">Click and drag a box over the person, face, tattoo, clothing brand, or serial number.</p>
-          <div class="crop-canvas-wrapper">
+        <div class="modal-body">
+          <p class="field-note">Click and drag a box over the person, face, tattoo, or serial number.</p>
+          <div class="crop-canvas-box">
             <canvas id="crop-canvas"></canvas>
           </div>
-          <div class="crop-actions">
-            <button id="btn-cancel-crop" class="btn-secondary btn-small">Cancel</button>
-            <button id="btn-apply-crop" class="btn-primary btn-small">Apply Crop</button>
+          <div class="modal-footer">
+            <button id="btn-cancel-crop" class="btn-default btn-sm">Cancel</button>
+            <button id="btn-apply-crop" class="btn-action btn-sm">Apply Crop</button>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- Vault Passphrase Modal -->
-    <div id="vault-modal" class="modal-overlay hidden">
-      <div class="crop-modal-content">
-        <div class="drawer-header">
+    <!-- Master Vault Passphrase Modal -->
+    <div id="vault-modal" class="modal-backdrop hidden">
+      <div class="ub-modal">
+        <div class="modal-header">
           <h3 id="vault-modal-title">🔒 Master Cryptographic Vault</h3>
-          <button id="btn-close-vault-modal" class="btn-close-drawer">✕</button>
+          <button id="btn-close-vault-modal" class="modal-close">✕</button>
         </div>
-        <div class="crop-modal-body">
-          <p id="vault-modal-desc" class="field-hint">Enter your Master Passphrase to derive your 256-bit encryption key.</p>
-          <div class="form-card">
-            <label class="form-label">Master Passphrase (min 8 characters):</label>
+        <div class="modal-body">
+          <p id="vault-modal-desc" class="field-note">Enter your Master Passphrase to derive your 256-bit encryption key.</p>
+          <div class="form-group">
+            <label class="form-title">Master Passphrase (min 8 characters):</label>
             <input type="password" id="vault-pass-input" placeholder="Enter secure passphrase...">
           </div>
-          <div id="vault-confirm-group" class="form-card hidden">
-            <label class="form-label">Confirm Master Passphrase:</label>
+          <div id="vault-confirm-group" class="form-group hidden">
+            <label class="form-title">Confirm Master Passphrase:</label>
             <input type="password" id="vault-pass-confirm" placeholder="Re-enter passphrase to confirm...">
           </div>
-          <div class="crop-actions">
-            <button id="btn-cancel-vault" class="btn-secondary btn-small">Cancel</button>
-            <button id="btn-submit-vault" class="btn-primary btn-small">Unlock Vault</button>
+          <div class="modal-footer">
+            <button id="btn-cancel-vault" class="btn-default btn-sm">Cancel</button>
+            <button id="btn-submit-vault" class="btn-action btn-sm">Unlock Vault</button>
           </div>
         </div>
       </div>
