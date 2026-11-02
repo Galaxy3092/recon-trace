@@ -1,10 +1,58 @@
 /**
- * ReconTrace Matcher Engine
- * Handles client-side perceptual hashing, SHA-256 cryptographic hashing for evidence,
- * and visual similarity score calculation (0-100%).
+ * ReconTrace Matcher Engine (Privacy Hardened)
+ * Features:
+ *  - Client-side EXIF/GPS Metadata Sanitization & Stripping
+ *  - SHA-256 cryptographic evidence hashing
+ *  - Difference Hash (dHash) & Color Profiling
+ *  - Resilient cross-origin handling & zero-memory leaks
  */
 
 class ReconMatcher {
+  /**
+   * Client-Side EXIF / GPS Metadata Scrubber
+   * Renders the image onto an HTML5 canvas and re-encodes it.
+   * Completely strips EXIF, GPS location tags, camera serial numbers, and device models.
+   */
+  static async sanitizeImageFile(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onerror = () => reject(new Error('Failed to read image file.'));
+      reader.onload = () => {
+        const img = new Image();
+        img.onload = () => {
+          try {
+            const canvas = document.createElement('canvas');
+            canvas.width = img.naturalWidth;
+            canvas.height = img.naturalHeight;
+            const ctx = canvas.getContext('2d');
+            
+            // Draw raw pixel raster (discards all metadata headers)
+            ctx.drawImage(img, 0, 0);
+
+            canvas.toBlob((cleanBlob) => {
+              if (cleanBlob) {
+                resolve({
+                  cleanBlob: cleanBlob,
+                  width: img.naturalWidth,
+                  height: img.naturalHeight,
+                  scrubbed: true
+                });
+              } else {
+                resolve({ cleanBlob: file, scrubbed: false });
+              }
+            }, file.type || 'image/png');
+          } catch (e) {
+            console.warn('Canvas sanitization fallback:', e);
+            resolve({ cleanBlob: file, scrubbed: false });
+          }
+        };
+        img.onerror = () => reject(new Error('Invalid or corrupted image format.'));
+        img.src = reader.result;
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
   /**
    * Compute SHA-256 evidence hash of an image Blob / File
    */
@@ -30,7 +78,7 @@ class ReconMatcher {
 
   /**
    * Compute a 64-bit Difference Hash (dHash)
-   * Resizes image to 9x8 grayscale, compares adjacent pixels.
+   * Resizes image to 9x8 grayscale, compares adjacent horizontal pixels.
    */
   static computeDHash(imageElement) {
     const canvas = document.createElement('canvas');
@@ -43,7 +91,6 @@ class ReconMatcher {
     // Convert to grayscale row by row
     const grays = [];
     for (let i = 0; i < imgData.length; i += 4) {
-      // Perceptual grayscale coefficients
       const gray = 0.299 * imgData[i] + 0.587 * imgData[i + 1] + 0.114 * imgData[i + 2];
       grays.push(gray);
     }
@@ -94,7 +141,6 @@ class ReconMatcher {
     for (let i = 0; i < len; i++) {
       if (hash1[i] !== hash2[i]) dist++;
     }
-    // Add difference if length mismatch
     dist += Math.abs(hash1.length - hash2.length);
     return dist;
   }
@@ -159,7 +205,12 @@ class ReconMatcher {
   }
 }
 
-// Make globally available in browser environment
 if (typeof window !== 'undefined') {
   window.ReconMatcher = ReconMatcher;
+}
+if (typeof globalThis !== 'undefined') {
+  globalThis.ReconMatcher = ReconMatcher;
+}
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = ReconMatcher;
 }

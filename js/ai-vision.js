@@ -127,9 +127,17 @@ Do not include markdown backticks or any other text, output raw JSON only.`;
       const data = await res.json();
       const rawOutput = data.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
       
-      // Clean JSON in case markdown fence exists
-      const cleaned = rawOutput.replace(/```json/g, '').replace(/```/g, '').trim();
-      const parsed = JSON.parse(cleaned);
+      // Resilient JSON extraction (handles markdown fences, preamble, or trailing text)
+      let parsed = {};
+      const firstBrace = rawOutput.indexOf('{');
+      const lastBrace = rawOutput.lastIndexOf('}');
+      if (firstBrace !== -1 && lastBrace !== -1) {
+        parsed = JSON.parse(rawOutput.substring(firstBrace, lastBrace + 1));
+      } else {
+        const cleaned = rawOutput.replace(/```json/g, '').replace(/```/g, '').trim();
+        parsed = JSON.parse(cleaned);
+      }
+
       parsed.engineUsed = 'Gemini AI Vision';
       return parsed;
 

@@ -2,9 +2,9 @@ import os
 import re
 
 def run_security_audit():
-    print("=" * 65)
-    print("🎯 RECONTRACE VERIFICATION & PENETRATION AUDIT SUITE")
-    print("=" * 65)
+    print("=" * 70)
+    print("🎯 RECONTRACE DEEP VERIFICATION & ANTI-INTERCEPTION AUDIT")
+    print("=" * 70)
 
     failures = []
     passes = []
@@ -61,6 +61,42 @@ def run_security_audit():
     else:
         failures.append("Payload Boundary: Missing explicit image upload file size guard.")
 
+    # 7. EXIF / GPS Metadata Scrubber
+    with open('/home/Galaxy/VSCodium/recon-trace/js/matcher.js') as f:
+        matcher_code = f.read()
+
+    if "sanitizeImageFile" in matcher_code and "canvas.toBlob" in matcher_code:
+        passes.append("EXIF Privacy: Client-side canvas re-encoding strips GPS coordinates, camera IDs, and metadata.")
+    else:
+        failures.append("EXIF Privacy: Missing canvas-based EXIF metadata scrubber.")
+
+    # 8. Query Placeholder Multi-Replacement
+    with open('/home/Galaxy/VSCodium/recon-trace/js/engines.js') as f:
+        engines_code = f.read()
+
+    if "replaceAll('{query}'" in engines_code:
+        passes.append("Query Formatting: replaceAll handles multi-parameter search URL templates correctly.")
+    else:
+        failures.append("Query Formatting: engines.js still uses replace() instead of replaceAll().")
+
+    # 9. Referrer Leakage Prevention
+    with open('/home/Galaxy/VSCodium/recon-trace/panel.html') as f:
+        html_code = f.read()
+
+    if 'name="referrer" content="no-referrer"' in html_code:
+        passes.append("Referrer Protection: <meta name='referrer' content='no-referrer'> stops HTTP Referer leaks.")
+    else:
+        failures.append("Referrer Protection: Missing no-referrer policy in panel.html.")
+
+    # 10. Strict Content Security Policy (CSP)
+    with open('/home/Galaxy/VSCodium/recon-trace/manifest.json') as f:
+        manifest_code = f.read()
+
+    if "content_security_policy" in manifest_code and "default-src 'self'" in manifest_code:
+        passes.append("Content Security Policy: Strict manifest CSP restricts script execution and network boundaries.")
+    else:
+        failures.append("Content Security Policy: Missing or loose CSP in manifest.json.")
+
     # Summary Output
     print(f"\n[+] Passed Security Controls ({len(passes)}/{len(passes) + len(failures)}):")
     for p in passes:
@@ -72,7 +108,7 @@ def run_security_audit():
             print(f"  🔴 {fail}")
         return False
     else:
-        print("\n🏆 ALL SECURITY CONTROLS, OPSEC & PENETRATION AUDITS PASSED 100%!")
+        print("\n🏆 ALL 10/10 ADVANCED SECURITY & ANTI-INTERCEPTION AUDITS PASSED 100%!")
         return True
 
 if __name__ == '__main__':

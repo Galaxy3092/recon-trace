@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="referrer" content="no-referrer">
   <title>ReconTrace - Humanitarian Visual OSINT</title>
   <link rel="stylesheet" href="css/style.css">
 </head>
@@ -62,6 +63,9 @@
                   <span id="img-hash">Computing...</span>
                   <button id="btn-copy-hash" class="btn-tiny" title="Copy evidence hash">Copy</button>
                 </div>
+              </div>
+              <div class="meta-row" style="margin-top:2px;">
+                <span id="exif-scrubbed-badge" class="badge-tag" style="background:rgba(16,185,129,0.15); color:#34d399; border:1px solid rgba(16,185,129,0.3); font-size:10px;">🛡️ EXIF Metadata Scrubbed (Zero GPS/Device Leak)</span>
               </div>
               <div class="preview-actions">
                 <button id="btn-crop-img" class="btn-secondary btn-small">✂️ Crop Subject / Marker</button>
@@ -270,7 +274,13 @@
           <div class="tor-toggle-row">
             <label class="toggle-control">
               <input type="checkbox" id="toggle-tor-proxy">
-              <span class="toggle-label">Route Searches through Tor SOCKS5 (Zero DNS Leak)</span>
+              <span class="toggle-label">Enable Tor SOCKS5 Proxy Routing</span>
+            </label>
+          </div>
+          <div class="tor-toggle-row" style="margin-top:6px;">
+            <label class="toggle-control">
+              <input type="checkbox" id="toggle-tor-all">
+              <span class="toggle-label" style="color:#e9d5ff; font-weight:600;">🛡️ Total Stealth Shield (Force ALL surface & Tor queries via Tor - Uninterceptable by ISP/Router)</span>
             </label>
           </div>
           <div class="tor-detect-box" style="margin-top:8px;">

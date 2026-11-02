@@ -152,12 +152,20 @@ class ReconEngines {
   }
 
   /**
-   * Add a custom community search engine
+   * Add a custom community search engine (Strict HTTPS & OPSEC enforced)
    */
   static async addCustomEngine(engine) {
     const list = await this.getEngines();
     engine.id = 'custom_' + Date.now();
     engine.isCustom = true;
+
+    // Strict protocol security: enforce HTTPS for clearweb to prevent unencrypted Wi-Fi/router leaks
+    let url = (engine.urlTemplate || '').trim();
+    if (url.startsWith('http://') && !url.includes('.onion')) {
+      url = url.replace('http://', 'https://');
+    }
+    engine.urlTemplate = url;
+
     list.push(engine);
     await this.saveEngines(list);
     return list;
@@ -187,17 +195,23 @@ class ReconEngines {
   }
 
   /**
-   * Build query URLs for an engine based on query string and/or image URL
+   * Build query URLs for an engine based on query string and/or image URL (Bug-fixed: replaceAll)
    */
   static buildSearchUrl(engine, { query = '', imgUrl = '', hash = '' } = {}) {
     let url = engine.urlTemplate;
-    url = url.replace('{query}', encodeURIComponent(query));
-    url = url.replace('{img_url}', encodeURIComponent(imgUrl));
-    url = url.replace('{hash}', encodeURIComponent(hash));
+    url = url.replaceAll('{query}', encodeURIComponent(query));
+    url = url.replaceAll('{img_url}', encodeURIComponent(imgUrl));
+    url = url.replaceAll('{hash}', encodeURIComponent(hash));
     return url;
   }
 }
 
 if (typeof window !== 'undefined') {
   window.ReconEngines = ReconEngines;
+}
+if (typeof globalThis !== 'undefined') {
+  globalThis.ReconEngines = ReconEngines;
+}
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = ReconEngines;
 }

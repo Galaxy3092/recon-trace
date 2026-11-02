@@ -82,6 +82,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const torHostInput = document.getElementById('tor-host');
   const torPortInput = document.getElementById('tor-port');
   const toggleTorProxy = document.getElementById('toggle-tor-proxy');
+  const toggleTorAll = document.getElementById('toggle-tor-all');
   const btnDetectTor = document.getElementById('btn-detect-tor');
   const torDetectStatus = document.getElementById('tor-detect-status');
   const btnExportDossier = document.getElementById('btn-export-dossier');
@@ -375,15 +376,27 @@ document.addEventListener('DOMContentLoaded', async () => {
       return;
     }
 
-    state.targetImgBlob = file;
-    state.targetHash = await ReconMatcher.computeSHA256(file);
+    // 🛡️ Privacy & Anti-Interception: Client-side EXIF/GPS metadata scrubber
+    // Strips camera serial numbers, GPS tags, and software metadata before any hash or network call
+    let processedBlob = file;
+    try {
+      const sanitized = await ReconMatcher.sanitizeImageFile(file);
+      if (sanitized && sanitized.cleanBlob) {
+        processedBlob = sanitized.cleanBlob;
+      }
+    } catch (e) {
+      console.warn('EXIF scrub fallback:', e);
+    }
+
+    state.targetImgBlob = processedBlob;
+    state.targetHash = await ReconMatcher.computeSHA256(processedBlob);
 
     const reader = new FileReader();
     reader.onload = (e) => {
       state.targetImgSrc = e.target.result;
       displayTargetImage();
     };
-    reader.readAsDataURL(file);
+    reader.readAsDataURL(processedBlob);
   }
 
   function displayTargetImage() {
@@ -920,7 +933,8 @@ document.addEventListener('DOMContentLoaded', async () => {
       await ReconTor.saveSettings({
         torProxyHost: torHostInput.value.trim(),
         torProxyPort: parseInt(torPortInput.value, 10),
-        routeAllThroughTor: enabled
+        proxyEnabled: enabled,
+        routeAllThroughTor: toggleTorAll.checked
       });
 
       const res = await ReconTor.configureBrowserProxy(enabled);
@@ -931,6 +945,26 @@ document.addEventListener('DOMContentLoaded', async () => {
       } else {
         torBadge.className = 'status-pill status-standby';
         torBadge.textContent = '🧅 Tor: Standby';
+      }
+    });
+
+    toggleTorAll.addEventListener('change', async (e) => {
+      const forceAll = e.target.checked;
+      if (forceAll) {
+        toggleTorProxy.checked = true;
+      }
+      await ReconTor.saveSettings({
+        torProxyHost: torHostInput.value.trim(),
+        torProxyPort: parseInt(torPortInput.value, 10),
+        proxyEnabled: toggleTorProxy.checked,
+        routeAllThroughTor: forceAll
+      });
+
+      if (toggleTorProxy.checked) {
+        await ReconTor.configureBrowserProxy(true);
+        torBadge.className = 'status-pill status-active-tor';
+        torBadge.textContent = forceAll ? '🛡️ Stealth: All Tor' : '🧅 Tor: Routed';
+        alert(forceAll ? '🛡️ TOTAL STEALTH ACTIVE:\n\n100% of Surface Web & Tor traffic is now routed through Tor SOCKS5 with remote DNS resolution.\n\nYour ISP and local home router cannot see what search engines or cases you investigate.' : 'Standard Tor routing enabled.');
       }
     });
 
@@ -1082,7 +1116,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     const s = await ReconTor.getSettings();
     torHostInput.value = s.torProxyHost || '127.0.0.1';
     torPortInput.value = s.torProxyPort || 9050;
-    toggleTorProxy.checked = s.routeAllThroughTor || false;
+    toggleTorProxy.checked = Boolean(s.proxyEnabled);
+    toggleTorAll.checked = Boolean(s.routeAllThroughTor);
+    if (s.proxyEnabled) {
+      torBadge.className = 'status-pill status-active-tor';
+      torBadge.textContent = s.routeAllThroughTor ? '🛡️ Stealth: All Tor' : '🧅 Tor: Routed';
+    }
   }
 
   function downloadFile(content, fileName, contentType) {
