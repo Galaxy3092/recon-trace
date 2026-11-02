@@ -82,9 +82,26 @@ document.addEventListener('DOMContentLoaded', async () => {
   const torHostInput = document.getElementById('tor-host');
   const torPortInput = document.getElementById('tor-port');
   const toggleTorProxy = document.getElementById('toggle-tor-proxy');
+  const btnDetectTor = document.getElementById('btn-detect-tor');
+  const torDetectStatus = document.getElementById('tor-detect-status');
   const btnExportDossier = document.getElementById('btn-export-dossier');
   const btnExportJson = document.getElementById('btn-export-json');
   const btnPanicWipe = document.getElementById('btn-panic-wipe');
+
+  // Vault Elements
+  const vaultBadge = document.getElementById('vault-badge');
+  const vaultStatusText = document.getElementById('vault-status-text');
+  const btnVaultAction = document.getElementById('btn-vault-action');
+  const btnLockVault = document.getElementById('btn-lock-vault');
+  const vaultModal = document.getElementById('vault-modal');
+  const vaultModalTitle = document.getElementById('vault-modal-title');
+  const vaultModalDesc = document.getElementById('vault-modal-desc');
+  const vaultPassInput = document.getElementById('vault-pass-input');
+  const vaultConfirmGroup = document.getElementById('vault-confirm-group');
+  const vaultPassConfirm = document.getElementById('vault-pass-confirm');
+  const btnCancelVault = document.getElementById('btn-cancel-vault');
+  const btnSubmitVault = document.getElementById('btn-submit-vault');
+  const btnCloseVaultModal = document.getElementById('btn-close-vault-modal');
 
   // ==========================================
   // Initialization
@@ -104,19 +121,22 @@ document.addEventListener('DOMContentLoaded', async () => {
     checkForPendingContextSearch();
   }
 
-  // Check if opened via right-click context menu
+  // Check if opened via right-click context menu (Ephemeral in-memory IPC)
   async function checkForPendingContextSearch() {
-    if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
-      const data = await chrome.storage.local.get(['recontrace_pending_search_url', 'recontrace_pending_timestamp']);
+    if (typeof chrome !== 'undefined' && chrome.storage) {
+      const storageArea = chrome.storage.session || chrome.storage.local;
+      const data = await storageArea.get(['recontrace_pending_search_url', 'recontrace_pending_timestamp']);
+
       if (data && data.recontrace_pending_search_url) {
-        // Clear pending item so it doesn't reload on every open
-        await chrome.storage.local.remove(['recontrace_pending_search_url', 'recontrace_pending_timestamp']);
+        // Immediate self-destruct from storage
+        await storageArea.remove(['recontrace_pending_search_url', 'recontrace_pending_timestamp']);
         
         // Fetch and load image
         try {
           const resp = await fetch(data.recontrace_pending_search_url);
           const blob = await resp.blob();
-          caseTitleInput.value = 'Case: ' + new URL(data.recontrace_pending_search_url).pathname.split('/').pop();
+          const cleanName = new URL(data.recontrace_pending_search_url).pathname.split('/').pop() || 'Context_Target';
+          caseTitleInput.value = 'Case: ' + cleanName;
           await handleFile(blob);
         } catch (e) {
           console.warn('Could not auto-fetch right-click image:', e);
@@ -348,6 +368,13 @@ document.addEventListener('DOMContentLoaded', async () => {
       return;
     }
 
+    // Limit to 15MB to prevent memory exhaustion
+    const MAX_BYTES = 15 * 1024 * 1024;
+    if (file.size > MAX_BYTES) {
+      alert('Image file exceeds the 15MB safe limit. Please select a smaller or compressed image.');
+      return;
+    }
+
     state.targetImgBlob = file;
     state.targetHash = await ReconMatcher.computeSHA256(file);
 
@@ -548,12 +575,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     // AI Triage & Evaluation:
     const topScore = generatedResults.length > 0 ? generatedResults[0].score : 0;
     if (topScore < 75) {
-      searchStatusText.innerHTML = `⚠️ Surface matches weak (<span style="color:#fbbf24">${topScore}% max</span>). Ready for Deep Tor scan.`;
+      searchStatusText.textContent = `⚠️ Surface matches weak (${topScore}% max). Ready for Deep Tor scan.`;
       if (checkAutoEscalate.checked) {
         setTimeout(() => runTorSearch(), 1200);
       }
     } else {
-      searchStatusText.innerHTML = `🟢 High confidence match found (<span style="color:#34d399">${topScore}%</span>) on surface web.`;
+      searchStatusText.textContent = `🟢 High confidence match found (${topScore}%) on surface web.`;
     }
   }
 
@@ -656,11 +683,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     resultsList.innerHTML = '';
 
     if (filtered.length === 0) {
-      resultsList.innerHTML = `
-        <div class="empty-state">
-          <p>No matches at or above ${state.activeThreshold}%. Lower the slider to see broader leads.</p>
-        </div>
-      `;
+      const emptyDiv = document.createElement('div');
+      emptyDiv.className = 'empty-state';
+      const emptyP = document.createElement('p');
+      emptyP.textContent = `No matches at or above ${state.activeThreshold}%. Lower the slider to see broader leads.`;
+      emptyDiv.appendChild(emptyP);
+      resultsList.appendChild(emptyDiv);
       return;
     }
 
@@ -668,38 +696,78 @@ document.addEventListener('DOMContentLoaded', async () => {
       const card = document.createElement('div');
       card.className = 'match-card';
 
-      card.innerHTML = `
-        <div class="match-card-thumb">
-          <img src="${item.thumb || state.targetImgSrc}" alt="Thumbnail">
-        </div>
-        <div class="match-card-info">
-          <div class="match-card-header">
-            <span class="match-source-title">${item.source}</span>
-            <span class="badge-score ${item.confidence.class}">${item.score}% Match</span>
-          </div>
-          <p class="match-desc">${item.description}</p>
-          <div class="match-actions">
-            <a href="${item.url}" target="_blank" rel="noopener noreferrer" class="btn-open-lead">Open Lead ↗</a>
-            <button class="btn-save-lead" data-id="${item.id}">Save to Case 📁</button>
-          </div>
-        </div>
-      `;
+      // Thumbnail
+      const thumbWrapper = document.createElement('div');
+      thumbWrapper.className = 'match-card-thumb';
+      const img = document.createElement('img');
+      img.src = item.thumb || state.targetImgSrc || '';
+      img.alt = 'Thumbnail';
+      thumbWrapper.appendChild(img);
+      card.appendChild(thumbWrapper);
 
-      // Save to Case action
-      const btnSave = card.querySelector('.btn-save-lead');
-      btnSave.addEventListener('click', async () => {
-        const caseTitle = caseTitleInput.value || 'Active Investigation';
-        await ReconStorage.saveCase({
-          id: state.activeCaseId,
-          title: caseTitle,
-          imageHash: state.targetHash,
-          notes: 'Evidence item flagged by investigator.'
-        });
+      // Info
+      const info = document.createElement('div');
+      info.className = 'match-card-info';
 
-        await ReconStorage.addLeadToCase(state.activeCaseId, item);
-        btnSave.textContent = 'Saved ✔';
-        btnSave.classList.add('saved');
+      const header = document.createElement('div');
+      header.className = 'match-card-header';
+
+      const title = document.createElement('span');
+      title.className = 'match-source-title';
+      title.textContent = item.source || 'Unknown Source';
+
+      const scoreBadge = document.createElement('span');
+      scoreBadge.className = `badge-score ${item.confidence ? item.confidence.class : 'badge-med'}`;
+      scoreBadge.textContent = `${item.score}% Match`;
+
+      header.appendChild(title);
+      header.appendChild(scoreBadge);
+      info.appendChild(header);
+
+      const desc = document.createElement('p');
+      desc.className = 'match-desc';
+      desc.textContent = item.description || '';
+      info.appendChild(desc);
+
+      const actions = document.createElement('div');
+      actions.className = 'match-actions';
+
+      const openLink = document.createElement('a');
+      openLink.className = 'btn-open-lead';
+      openLink.textContent = 'Open Lead ↗';
+      openLink.target = '_blank';
+      openLink.rel = 'noopener noreferrer';
+      // Sanitize URL protocol strictly
+      const safeUrl = (typeof item.url === 'string' && (item.url.startsWith('https://') || item.url.startsWith('http://'))) ? item.url : '#';
+      openLink.href = safeUrl;
+
+      const saveBtn = document.createElement('button');
+      saveBtn.className = 'btn-save-lead';
+      saveBtn.textContent = 'Save to Case 📁';
+      saveBtn.dataset.id = item.id;
+
+      saveBtn.addEventListener('click', async () => {
+        try {
+          const caseTitle = caseTitleInput.value || 'Active Investigation';
+          await ReconStorage.saveCase({
+            id: state.activeCaseId,
+            title: caseTitle,
+            imageHash: state.targetHash,
+            notes: 'Evidence item flagged by investigator.'
+          });
+
+          await ReconStorage.addLeadToCase(state.activeCaseId, item);
+          saveBtn.textContent = 'Saved ✔';
+          saveBtn.classList.add('saved');
+        } catch (err) {
+          alert('Could not save to case: ' + err.message);
+        }
       });
+
+      actions.appendChild(openLink);
+      actions.appendChild(saveBtn);
+      info.appendChild(actions);
+      card.appendChild(info);
 
       resultsList.appendChild(card);
     });
@@ -732,27 +800,47 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   // ==========================================
-  // Drawer 1: Engine Customization
+  // Drawer 1: Engine Customization (XSS-Safe)
   // ==========================================
   function renderEngineSettingsList() {
     engineSettingsList.innerHTML = '';
     state.engines.forEach(eng => {
       const div = document.createElement('div');
       div.className = 'engine-item';
-      div.innerHTML = `
-        <div class="engine-item-info">
-          <h5>${eng.name} ${eng.isCustom ? '<span style="color:#06b6d4">(Custom)</span>' : ''}</h5>
-          <p>${eng.desc || ''}</p>
-        </div>
-        <div class="engine-item-toggle">
-          <input type="checkbox" id="toggle_${eng.id}" ${eng.enabled ? 'checked' : ''}>
-        </div>
-      `;
 
-      const checkbox = div.querySelector('input');
+      const info = document.createElement('div');
+      info.className = 'engine-item-info';
+
+      const h5 = document.createElement('h5');
+      h5.textContent = eng.name;
+      if (eng.isCustom) {
+        const customBadge = document.createElement('span');
+        customBadge.style.color = '#06b6d4';
+        customBadge.textContent = ' (Custom)';
+        h5.appendChild(customBadge);
+      }
+
+      const p = document.createElement('p');
+      p.textContent = eng.desc || '';
+
+      info.appendChild(h5);
+      info.appendChild(p);
+
+      const toggleWrapper = document.createElement('div');
+      toggleWrapper.className = 'engine-item-toggle';
+
+      const checkbox = document.createElement('input');
+      checkbox.type = 'checkbox';
+      checkbox.id = `toggle_${eng.id}`;
+      checkbox.checked = Boolean(eng.enabled);
+
       checkbox.addEventListener('change', async (e) => {
         state.engines = await ReconEngines.toggleEngine(eng.id, e.target.checked);
       });
+
+      toggleWrapper.appendChild(checkbox);
+      div.appendChild(info);
+      div.appendChild(toggleWrapper);
 
       engineSettingsList.appendChild(div);
     });
@@ -765,6 +853,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     if (!name || !url) {
       alert('Please enter both a Target Name and a URL Template.');
+      return;
+    }
+
+    if (!url.startsWith('https://') && !url.startsWith('http://')) {
+      alert('URL Template must begin with http:// or https://');
       return;
     }
 
@@ -808,6 +901,20 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Drawer 3: OPSEC, Tor & Export Handlers
   // ==========================================
   function setupOPSECHandlers() {
+    // Tor Auto-Detection
+    btnDetectTor.addEventListener('click', async () => {
+      torDetectStatus.textContent = 'Probing local ports 9050 and 9150...';
+      const result = await ReconTor.autoDetectTorPort();
+      if (result.found) {
+        torPortInput.value = result.port;
+        torDetectStatus.style.color = '#34d399';
+        torDetectStatus.textContent = `Active Tor listener detected: Port ${result.port} (${result.source})!`;
+      } else {
+        torDetectStatus.style.color = '#fbbf24';
+        torDetectStatus.textContent = 'No local Tor port detected. Please start Tor daemon or Tor Browser.';
+      }
+    });
+
     toggleTorProxy.addEventListener('change', async (e) => {
       const enabled = e.target.checked;
       await ReconTor.saveSettings({
@@ -820,17 +927,20 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (res.enabled) {
         torBadge.className = 'status-pill status-active-tor';
         torBadge.textContent = '🧅 Tor: Routed';
-        alert('Tor SOCKS5 proxy routing enabled for browser traffic.');
+        alert('Tor SOCKS5 proxy routing enabled for browser traffic with Zero-DNS-Leak protection.');
       } else {
         torBadge.className = 'status-pill status-standby';
         torBadge.textContent = '🧅 Tor: Standby';
       }
     });
 
+    // Vault UI & Lifecycle
+    setupVaultHandlers();
+
     // Export Markdown Dossier
     btnExportDossier.addEventListener('click', async () => {
       const cases = await ReconStorage.getAllCases();
-      const currentCase = cases.find(c => c.id === state.activeCaseId) || {
+      const currentCase = (Array.isArray(cases) ? cases.find(c => c.id === state.activeCaseId) : null) || {
         id: state.activeCaseId,
         title: caseTitleInput.value,
         imageHash: state.targetHash,
@@ -857,6 +967,115 @@ document.addEventListener('DOMContentLoaded', async () => {
         window.location.reload();
       }
     });
+  }
+
+  // ==========================================
+  // Zero-Knowledge Cryptographic Vault Handlers
+  // ==========================================
+  async function setupVaultHandlers() {
+    await updateVaultUI();
+
+    window.addEventListener('recontrace:vault-locked', () => {
+      updateVaultUI();
+      alert('🔒 Vault auto-locked due to inactivity.');
+    });
+
+    vaultBadge.addEventListener('click', () => {
+      openVaultModal();
+    });
+
+    btnVaultAction.addEventListener('click', () => {
+      openVaultModal();
+    });
+
+    btnLockVault.addEventListener('click', () => {
+      ReconCrypto.lockVault();
+      updateVaultUI();
+      alert('🔒 Vault locked. Encryption key wiped from memory.');
+    });
+
+    const closeVault = () => vaultModal.classList.add('hidden');
+    btnCloseVaultModal.addEventListener('click', closeVault);
+    btnCancelVault.addEventListener('click', closeVault);
+
+    btnSubmitVault.addEventListener('click', async () => {
+      const pass = vaultPassInput.value.trim();
+      const isInit = await ReconCrypto.isVaultInitialized();
+
+      if (!pass || pass.length < 8) {
+        alert('Passphrase must be at least 8 characters.');
+        return;
+      }
+
+      try {
+        if (!isInit) {
+          // Initializing new vault
+          const confirmPass = vaultPassConfirm.value.trim();
+          if (pass !== confirmPass) {
+            alert('Passphrases do not match. Please re-enter.');
+            return;
+          }
+          await ReconCrypto.initializeVault(pass);
+          alert('🔒 Master Vault initialized! All cases and settings will now be encrypted with AES-256-GCM.');
+        } else {
+          // Unlocking existing vault
+          await ReconCrypto.unlockVault(pass);
+          alert('🔓 Vault unlocked. AES-256 decryption key active in memory.');
+        }
+
+        vaultPassInput.value = '';
+        vaultPassConfirm.value = '';
+        closeVault();
+        await updateVaultUI();
+      } catch (err) {
+        alert('Vault Error: ' + err.message);
+      }
+    });
+  }
+
+  async function updateVaultUI() {
+    const isInit = await ReconCrypto.isVaultInitialized();
+
+    if (!isInit) {
+      vaultStatusText.textContent = 'Status: Not Initialized (Plaintext)';
+      vaultBadge.textContent = '🔒 Vault: Setup';
+      vaultBadge.className = 'status-pill status-vault-locked';
+      btnVaultAction.textContent = 'Set Master Passphrase';
+      btnLockVault.classList.add('hidden');
+    } else if (ReconCrypto.isUnlocked) {
+      vaultStatusText.textContent = 'Status: AES-256-GCM Active (E2EE)';
+      vaultBadge.textContent = '🔓 AES-256 E2EE';
+      vaultBadge.className = 'status-pill status-vault-unlocked';
+      btnVaultAction.textContent = 'Vault Active ✔';
+      btnLockVault.classList.remove('hidden');
+    } else {
+      vaultStatusText.textContent = 'Status: Locked (Zero-Knowledge)';
+      vaultBadge.textContent = '🔒 Vault: Locked';
+      vaultBadge.className = 'status-pill status-vault-locked';
+      btnVaultAction.textContent = 'Unlock Vault';
+      btnLockVault.classList.add('hidden');
+    }
+  }
+
+  async function openVaultModal() {
+    const isInit = await ReconCrypto.isVaultInitialized();
+    vaultPassInput.value = '';
+    vaultPassConfirm.value = '';
+
+    if (!isInit) {
+      vaultModalTitle.textContent = '🔒 Setup Master Cryptographic Vault';
+      vaultModalDesc.textContent = 'Choose a strong Master Passphrase (minimum 8 characters). This derives a 256-bit AES key to protect all cases and keys.';
+      vaultConfirmGroup.classList.remove('hidden');
+      btnSubmitVault.textContent = 'Create Encrypted Vault';
+    } else {
+      vaultModalTitle.textContent = '🔒 Unlock Cryptographic Vault';
+      vaultModalDesc.textContent = 'Enter your Master Passphrase to derive your AES-256 decryption key in memory.';
+      vaultConfirmGroup.classList.add('hidden');
+      btnSubmitVault.textContent = 'Unlock Vault';
+    }
+
+    vaultModal.classList.remove('hidden');
+    vaultPassInput.focus();
   }
 
   async function loadStoredTorSettings() {

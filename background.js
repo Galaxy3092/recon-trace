@@ -1,9 +1,9 @@
 /**
- * ReconTrace Service Worker (Manifest V3)
- * Handles Side Panel activation, Context Menus, and Proxy Configuration.
+ * ReconTrace Service Worker (Manifest V3 Hardened)
+ * Handles Side Panel activation, Context Menus, and Ephemeral In-Memory IPC.
  */
 
-// Open side panel on action icon click
+// Configure side panel behavior on action icon click
 chrome.sidePanel
   .setPanelBehavior({ openPanelOnActionClick: true })
   .catch((error) => console.error('Side panel behavior error:', error));
@@ -23,18 +23,24 @@ chrome.runtime.onInstalled.addListener(() => {
   });
 });
 
-// Handle Context Menu clicks
-chrome.contextMenus.onClicked.addListener((info, tab) => {
+// Handle Context Menu clicks with Ephemeral In-Memory Storage (Zero Disk Persistence)
+chrome.contextMenus.onClicked.addListener(async (info, tab) => {
   if (info.menuItemId === 'recontrace_search_image' && info.srcUrl) {
-    // Open side panel for the active window
     if (tab && tab.windowId) {
-      chrome.sidePanel.open({ windowId: tab.windowId }).then(() => {
-        // Send message to side panel with image URL
-        chrome.storage.local.set({
-          recontrace_pending_search_url: info.srcUrl,
-          recontrace_pending_timestamp: Date.now()
-        });
-      });
+      await chrome.sidePanel.open({ windowId: tab.windowId });
+
+      // Use chrome.storage.session (RAM only, never written to disk) if available
+      const payload = {
+        recontrace_pending_search_url: info.srcUrl,
+        recontrace_pending_timestamp: Date.now()
+      };
+
+      if (chrome.storage && chrome.storage.session) {
+        await chrome.storage.session.set(payload);
+      } else {
+        // Fallback to local storage with immediate self-destruct upon reading
+        await chrome.storage.local.set(payload);
+      }
     }
   } else if (info.menuItemId === 'recontrace_open_panel' && tab && tab.windowId) {
     chrome.sidePanel.open({ windowId: tab.windowId });

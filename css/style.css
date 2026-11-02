@@ -130,6 +130,19 @@ body {
   box-shadow: 0 0 8px rgba(168, 85, 247, 0.4);
 }
 
+.status-vault-locked {
+  background: rgba(245, 158, 11, 0.15);
+  color: #fbbf24;
+  border-color: rgba(245, 158, 11, 0.3);
+}
+
+.status-vault-unlocked {
+  background: rgba(16, 185, 129, 0.2);
+  color: #34d399;
+  border-color: rgba(16, 185, 129, 0.4);
+  box-shadow: 0 0 8px rgba(16, 185, 129, 0.3);
+}
+
 /* ==========================================
    Main Content Layout
    ========================================== */

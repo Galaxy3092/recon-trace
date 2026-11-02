@@ -21,6 +21,7 @@
       <div class="header-status">
         <span id="surface-badge" class="status-pill status-ready">🌐 Surface: Ready</span>
         <span id="tor-badge" class="status-pill status-standby">🧅 Tor: Standby</span>
+        <span id="vault-badge" class="status-pill status-vault-locked" title="Zero-Knowledge AES-256 Vault Status">🔒 Vault: Setup</span>
       </div>
     </header>
 
@@ -269,8 +270,25 @@
           <div class="tor-toggle-row">
             <label class="toggle-control">
               <input type="checkbox" id="toggle-tor-proxy">
-              <span class="toggle-label">Route Searches through Tor SOCKS5</span>
+              <span class="toggle-label">Route Searches through Tor SOCKS5 (Zero DNS Leak)</span>
             </label>
+          </div>
+          <div class="tor-detect-box" style="margin-top:8px;">
+            <button id="btn-detect-tor" class="btn-secondary btn-tiny">🔍 Auto-Detect Local Tor Instance</button>
+            <span id="tor-detect-status" class="field-hint" style="display:block; margin-top:4px;">Checks ports 9050 (System Daemon) & 9150 (Tor Browser)</span>
+          </div>
+        </div>
+
+        <!-- Zero-Knowledge Cryptographic Vault -->
+        <div class="form-card">
+          <h4>🔒 Zero-Knowledge Cryptographic Vault (AES-256-GCM)</h4>
+          <p class="field-hint">All investigation files, evidence hashes, notes, and API keys are encrypted at rest with PBKDF2 + AES-256-GCM.</p>
+          <div class="vault-status-row" style="margin: 6px 0;">
+            <span id="vault-status-text" class="field-hint" style="color:var(--text-main); font-weight:600;">Status: Checking vault...</span>
+          </div>
+          <div class="action-buttons-row">
+            <button id="btn-vault-action" class="btn-primary btn-small">Set Master Passphrase</button>
+            <button id="btn-lock-vault" class="btn-secondary btn-small hidden">Lock Vault 🔒</button>
           </div>
         </div>
 
@@ -314,9 +332,35 @@
       </div>
     </div>
 
+    <!-- Vault Passphrase Modal -->
+    <div id="vault-modal" class="modal-overlay hidden">
+      <div class="crop-modal-content">
+        <div class="drawer-header">
+          <h3 id="vault-modal-title">🔒 Master Cryptographic Vault</h3>
+          <button id="btn-close-vault-modal" class="btn-close-drawer">✕</button>
+        </div>
+        <div class="crop-modal-body">
+          <p id="vault-modal-desc" class="field-hint">Enter your Master Passphrase to derive your 256-bit encryption key.</p>
+          <div class="form-card">
+            <label class="form-label">Master Passphrase (min 8 characters):</label>
+            <input type="password" id="vault-pass-input" placeholder="Enter secure passphrase...">
+          </div>
+          <div id="vault-confirm-group" class="form-card hidden">
+            <label class="form-label">Confirm Master Passphrase:</label>
+            <input type="password" id="vault-pass-confirm" placeholder="Re-enter passphrase to confirm...">
+          </div>
+          <div class="crop-actions">
+            <button id="btn-cancel-vault" class="btn-secondary btn-small">Cancel</button>
+            <button id="btn-submit-vault" class="btn-primary btn-small">Unlock Vault</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
   </div>
 
   <!-- Scripts -->
+  <script src="js/crypto-vault.js"></script>
   <script src="js/matcher.js"></script>
   <script src="js/engines.js"></script>
   <script src="js/ai-vision.js"></script>

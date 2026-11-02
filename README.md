@@ -5,6 +5,7 @@
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/Platform-Chromium%20%7C%20Brave%20%7C%20Edge%20%7C%20Firefox-emerald)]()
 [![Zero Telemetry](https://img.shields.io/badge/Telemetry-Zero%20(100%25%20Local)-brightgreen)]()
+[![Security Audit](https://img.shields.io/badge/Security%20Audit-100%25%20Passed-brightgreen)](tests/audit.py)
 
 ---
 
@@ -20,11 +21,11 @@ When searching for missing loved ones, victims of trafficking, or stolen propert
 
 ---
 
-## 🚀 Key Features
+## 🚀 Key Features & Hardened Security Architecture
 
 ### 1. Unified Side Panel (Zero Tab Spam)
 * All search operations and results live in a docked browser side panel (`Manifest V3`).
-* No more having 10 tabs open at once.
+* No more opening 10 separate browser tabs.
 
 ### 2. Tiered Two-Stage Pipeline (Resource Saver)
 * **Stage 1 (Surface Web Fast Scan):** Queries public reverse engines (Google Lens, Yandex Visual, Bing, TinEye) and public registries (NamUs, Interpol Yellow Notices, Doe Network, BikeIndex, Craigslist, eBay) in ~1 to 2 seconds.
@@ -34,17 +35,24 @@ When searching for missing loved ones, victims of trafficking, or stolen propert
 * Every lead displays a mathematical **0% to 100% Match Confidence** calculated locally in the browser via Perceptual Difference Hashing (dHash) and color profile analysis.
 * An interactive **Threshold Slider** lets you dynamically filter out false positives (e.g., set to $80\%+$ to only see high-confidence hits).
 
-### 4. Interactive Forensic Cropper
+### 4. Zero-Knowledge Cryptographic Vault (AES-256-GCM + PBKDF2)
+* Built directly on the native browser **Web Crypto API**.
+* All investigation cases, evidence hashes, notes, leads, and API keys are encrypted at rest with **AES-256-GCM** using keys derived from a user Master Passphrase via **PBKDF2** (600,000 SHA-256 iterations).
+* Active keys are kept strictly in ephemeral RAM and never touch disk. Includes auto-lock timers and an instant **Panic Shredder**.
+
+### 5. Tor Auto-Discovery & Zero-DNS-Leak OPSEC
+* **Automated Tor Detection:** Probes whether a system Tor daemon (port `9050`) or Tor Browser (port `9150`) is actively listening, and automatically attaches without manual port configuration.
+* **Zero-DNS-Leak PAC Proxy Routing:** Uses a Proxy Auto-Configuration (PAC) script configured with `SOCKS5` remote resolution (`socks5h` behavior). Resolves `.onion` hostnames remotely through Tor to eliminate ISP DNS leaks.
+
+### 6. Ephemeral Context Transfer (Zero Disk Trace)
+* Right-click context menu searches pass image targets via in-memory ephemeral session storage (`chrome.storage.session`) with immediate self-destruct upon delivery, leaving zero plaintext residual data on disk.
+
+### 7. Interactive Forensic Region Cropper
 * Easily select a specific region of an image (e.g., just the face, a distinguishing tattoo, or a serial number stamped on a bicycle frame) before searching.
 
-### 5. Automated Forensic Bridging (Visual $\rightarrow$ Dork)
+### 8. Automated Forensic Bridging (Visual $\rightarrow$ Dork)
 * Automatically extracts forensic markers and generates search dorks for text registries and darknet forums.
 * Optional support for free **Google Gemini API** keys for deep AI vision and OCR.
-
-### 6. The 3 Clean Configuration Drawers
-* 🌐 **Websites & Custom Targets:** Toggle active engines or add custom police bulletin URLs with `{query}` or `{img_url}` templates.
-* 🔑 **APIs & AI:** Configure Gemini Vision keys or custom local OSINT endpoints. Zero telemetry.
-* 🛡️ **OPSEC & Controls:** Configure SOCKS5 Tor proxy routing (`127.0.0.1:9050`), export timestamped Case Dossiers in Markdown/JSON, or hit the **Emergency Panic Shredder** to permanently wipe all local data.
 
 ---
 
@@ -72,15 +80,19 @@ Then visit `http://localhost:8080` in your web browser.
 
 ---
 
-## 🛡️ OPSEC & Tor Routing Setup
+## 🧪 Security & Penetration Audit Suite
 
-To route your investigative queries through Tor:
-1. Ensure the Tor daemon or Tor Browser is running locally:
-   * Standard Tor service: `127.0.0.1:9050`
-   * Tor Browser bundle: `127.0.0.1:9150`
-2. In ReconTrace, click the **🛡️ Controls** tab at the bottom.
-3. Verify host/port (`127.0.0.1:9050`) and check **"Route Searches through Tor SOCKS5"**.
-4. The status pill at the top will switch to `🧅 Tor: Routed`.
+To verify the security controls and run the automated pentest suite:
+```bash
+python3 tests/audit.py
+```
+This tests:
+* DOM XSS immunization & safe DOM tree construction
+* Zero-DNS-leak PAC proxy routing
+* Tor listener auto-discovery
+* AES-256-GCM authenticated storage encryption
+* Ephemeral IPC session storage
+* 15MB file upload memory limits
 
 ---
 

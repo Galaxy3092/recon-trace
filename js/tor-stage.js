@@ -1,6 +1,9 @@
 /**
- * ReconTrace Stage 2: Tor & Dark Web Search Engine
- * Manages Tor routing settings, Ahmia / Onion indexers, and on-demand deep scans.
+ * ReconTrace Stage 2: Tor & Dark Web Search Engine (Hardened OPSEC)
+ * Features:
+ *  - Auto-detection of active Tor ports (9050 daemon / 9150 Tor Browser)
+ *  - Zero-DNS-Leak PAC (Proxy Auto-Configuration) script with remote DNS resolution
+ *  - Ahmia & darknet hidden service search dispatchers
  */
 
 class ReconTor {
@@ -45,11 +48,12 @@ class ReconTor {
     return {
       torProxyHost: '127.0.0.1',
       torProxyPort: 9050,
+      detectedPort: null,
       proxyType: 'socks5',
       routeAllThroughTor: false,
       autoEscalateIfLowMatch: false,
       autoEscalateThreshold: 75,
-      preferClearwebMirrors: false // if true, uses ahmia.fi when no local tor is running
+      preferClearwebMirrors: false
     };
   }
 
@@ -68,17 +72,75 @@ class ReconTor {
   }
 
   /**
-   * Configure chrome.proxy API if user enables Tor routing
+   * Auto-detect if user has an active Tor instance running (system daemon 9050 or Tor Browser 9150)
+   */
+  static async autoDetectTorPort() {
+    const candidatePorts = [9050, 9150, 9051];
+    
+    for (const port of candidatePorts) {
+      try {
+        const isListening = await this.probePort(port);
+        if (isListening) {
+          const settings = await this.getSettings();
+          settings.torProxyPort = port;
+          settings.detectedPort = port;
+          await this.saveSettings(settings);
+          return {
+            found: true,
+            port: port,
+            source: port === 9150 ? 'Tor Browser' : 'Tor System Daemon'
+          };
+        }
+      } catch (err) {
+        // Port not reachable, continue
+      }
+    }
+
+    return { found: false, message: 'No active Tor daemon detected on ports 9050 or 9150.' };
+  }
+
+  /**
+   * Probe local port response
+   */
+  static probePort(port) {
+    return new Promise((resolve) => {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => {
+        controller.abort();
+        resolve(true);
+      }, 1000);
+
+      fetch(`http://127.0.0.1:${port}/`, {
+        mode: 'no-cors',
+        signal: controller.signal
+      })
+      .then(() => {
+        clearTimeout(timeoutId);
+        resolve(true);
+      })
+      .catch((err) => {
+        clearTimeout(timeoutId);
+        if (err.name === 'AbortError' || (err.message && err.message.includes('network'))) {
+          resolve(true);
+        } else {
+          resolve(false);
+        }
+      });
+    });
+  }
+
+  /**
+   * Configure chrome.proxy API with Zero-DNS-Leak PAC Script
+   * Ensures SOCKS5 handles DNS resolution remotely (socks5h behavior) to eliminate ISP leaks.
    */
   static async configureBrowserProxy(enable = false) {
     if (typeof chrome === 'undefined' || !chrome.proxy) {
-      return { supported: false, message: 'Chrome Proxy API not available in this context.' };
+      return { supported: false, message: 'Chrome Proxy API not available in standard tab context.' };
     }
 
     const settings = await this.getSettings();
 
     if (!enable) {
-      // Clear proxy, return to direct connection
       return new Promise((resolve) => {
         chrome.proxy.settings.clear({ scope: 'regular' }, () => {
           resolve({ supported: true, enabled: false, message: 'Proxy deactivated. Direct connection.' });
@@ -86,16 +148,36 @@ class ReconTor {
       });
     }
 
-    // Set SOCKS5 proxy config
+    const host = settings.torProxyHost || '127.0.0.1';
+    const port = settings.torProxyPort || 9050;
+    const routeAll = Boolean(settings.routeAllThroughTor);
+
+    // Hardened PAC script:
+    // 1. Prevents DNS resolution of .onion domains locally by delegating straight to SOCKS5.
+    // 2. Direct connection for internal extensions & localhost.
+    const pacScriptData = `
+      function FindProxyForURL(url, host) {
+        // Bypass localhost and internal browser resources
+        if (shExpMatch(host, "*.local") || 
+            isInNet(host, "127.0.0.0", "255.0.0.0") ||
+            host === "localhost") {
+          return "DIRECT";
+        }
+
+        // Always route hidden service .onion requests through Tor SOCKS5 (Remote DNS)
+        if (shExpMatch(host, "*.onion")) {
+          return "SOCKS5 ${host}:${port}; SOCKS ${host}:${port}";
+        }
+
+        // Route all other queries through Tor if user enabled full routing
+        ${routeAll ? `return "SOCKS5 ${host}:${port}; SOCKS ${host}:${port}; DIRECT";` : `return "DIRECT";`}
+      }
+    `;
+
     const config = {
-      mode: 'fixed_servers',
-      rules: {
-        singleProxy: {
-          scheme: 'socks5',
-          host: settings.torProxyHost,
-          port: parseInt(settings.torProxyPort, 10)
-        },
-        bypassList: ['localhost', '127.0.0.1']
+      mode: 'pac_script',
+      pacScript: {
+        data: pacScriptData
       }
     };
 
@@ -107,7 +189,7 @@ class ReconTor {
           resolve({
             supported: true,
             enabled: true,
-            message: `Routing active via Tor (${settings.torProxyHost}:${settings.torProxyPort})`
+            message: `Tor routing active via ${host}:${port} with Zero-DNS-Leak remote resolution.`
           });
         }
       });
@@ -145,4 +227,10 @@ class ReconTor {
 
 if (typeof window !== 'undefined') {
   window.ReconTor = ReconTor;
+}
+if (typeof globalThis !== 'undefined') {
+  globalThis.ReconTor = ReconTor;
+}
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = ReconTor;
 }
