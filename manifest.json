@@ -1,0 +1,35 @@
+{
+  "manifest_version": 3,
+  "name": "ReconTrace - Humanitarian Visual OSINT",
+  "version": "1.0.0",
+  "description": "Open-source visual search and OSINT suite for finding missing persons and stolen property across Surface Web and Tor.",
+  "permissions": [
+    "sidePanel",
+    "storage",
+    "contextMenus",
+    "tabs",
+    "activeTab"
+  ],
+  "optional_permissions": [
+    "proxy"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_title": "Open ReconTrace Panel",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "side_panel": {
+    "default_path": "panel.html"
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  }
+}
