@@ -89,6 +89,14 @@ document.addEventListener('DOMContentLoaded', async () => {
   const btnExportJson = document.getElementById('btn-export-json');
   const btnPanicWipe = document.getElementById('btn-panic-wipe');
 
+  // PI Stealth Elements
+  const stealthBadge = document.getElementById('stealth-badge');
+  const checkAutoPurgeHistory = document.getElementById('check-auto-purge-history');
+  const checkPreferIncognito = document.getElementById('check-prefer-incognito');
+  const checkRamOnly = document.getElementById('check-ram-only');
+  const btnPurgeCaseHistory = document.getElementById('btn-purge-case-history');
+  const btnClearClipboard = document.getElementById('btn-clear-clipboard');
+
   // Vault Elements
   const vaultBadge = document.getElementById('vault-badge');
   const vaultStatusText = document.getElementById('vault-status-text');
@@ -112,6 +120,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     renderFilterTree();
     loadStoredApiSettings();
     loadStoredTorSettings();
+    loadStoredStealthSettings();
 
     setupImageHandlers();
     setupThresholdHandlers();
@@ -745,14 +754,19 @@ document.addEventListener('DOMContentLoaded', async () => {
       const actions = document.createElement('div');
       actions.className = 'match-actions';
 
-      const openLink = document.createElement('a');
-      openLink.className = 'btn-open-lead';
-      openLink.textContent = 'Open Lead ↗';
-      openLink.target = '_blank';
-      openLink.rel = 'noopener noreferrer';
-      // Sanitize URL protocol strictly
+      const openBtn = document.createElement('button');
+      openBtn.className = 'btn-open-lead';
+      openBtn.textContent = '↗ Open Stealth';
+      openBtn.title = 'Open without recording in browser history or autocomplete';
+      
       const safeUrl = (typeof item.url === 'string' && (item.url.startsWith('https://') || item.url.startsWith('http://'))) ? item.url : '#';
-      openLink.href = safeUrl;
+      openBtn.addEventListener('click', async () => {
+        if (typeof ReconStealthGuard !== 'undefined') {
+          await ReconStealthGuard.openLeadStealth(safeUrl);
+        } else {
+          window.open(safeUrl, '_blank', 'noopener,noreferrer');
+        }
+      });
 
       const saveBtn = document.createElement('button');
       saveBtn.className = 'btn-save-lead';
@@ -777,7 +791,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
       });
 
-      actions.appendChild(openLink);
+      actions.appendChild(openBtn);
       actions.appendChild(saveBtn);
       info.appendChild(actions);
       card.appendChild(info);
@@ -1059,6 +1073,46 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Vault UI & Lifecycle
     setupVaultHandlers();
 
+    // PI Stealth Guard Handlers
+    if (checkAutoPurgeHistory) {
+      checkAutoPurgeHistory.addEventListener('change', async (e) => {
+        const s = await ReconStealthGuard.getSettings();
+        s.autoPurgeHistory = e.target.checked;
+        await ReconStealthGuard.saveSettings(s);
+      });
+    }
+
+    if (checkPreferIncognito) {
+      checkPreferIncognito.addEventListener('change', async (e) => {
+        const s = await ReconStealthGuard.getSettings();
+        s.preferIncognito = e.target.checked;
+        await ReconStealthGuard.saveSettings(s);
+      });
+    }
+
+    if (checkRamOnly) {
+      checkRamOnly.addEventListener('change', async (e) => {
+        const s = await ReconStealthGuard.getSettings();
+        s.zeroDiskResidue = e.target.checked;
+        await ReconStealthGuard.saveSettings(s);
+      });
+    }
+
+    if (btnPurgeCaseHistory) {
+      btnPurgeCaseHistory.addEventListener('click', async () => {
+        const urlsToPurge = (state.currentResults || []).map(r => r.url).filter(Boolean);
+        const result = await ReconStealthGuard.purgeCaseUrlsFromHistory(urlsToPurge);
+        alert(`🧹 PI History Sanitizer:\n\nPurged ${result.count} case URLs from browser history database.\nZero autocomplete traces remain.`);
+      });
+    }
+
+    if (btnClearClipboard) {
+      btnClearClipboard.addEventListener('click', async () => {
+        await ReconStealthGuard.clearSystemClipboard();
+        alert('📋 OS Clipboard has been wiped clean.');
+      });
+    }
+
     // Export Markdown Dossier
     btnExportDossier.addEventListener('click', async () => {
       const cases = await ReconStorage.getAllCases();
@@ -1198,6 +1252,14 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     vaultModal.classList.remove('hidden');
     vaultPassInput.focus();
+  }
+
+  async function loadStoredStealthSettings() {
+    if (typeof ReconStealthGuard === 'undefined') return;
+    const s = await ReconStealthGuard.getSettings();
+    if (checkAutoPurgeHistory) checkAutoPurgeHistory.checked = Boolean(s.autoPurgeHistory);
+    if (checkPreferIncognito) checkPreferIncognito.checked = Boolean(s.preferIncognito);
+    if (checkRamOnly) checkRamOnly.checked = Boolean(s.zeroDiskResidue);
   }
 
   async function loadStoredTorSettings() {

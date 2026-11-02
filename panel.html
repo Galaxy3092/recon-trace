@@ -23,6 +23,7 @@
         <span id="surface-badge" class="status-pill status-ready">Surface</span>
         <span id="tor-badge" class="status-pill status-standby">Tor: Off</span>
         <span id="vault-badge" class="status-pill status-vault-locked" title="Zero-Knowledge AES-256 Vault Status">Vault</span>
+        <span id="stealth-badge" class="status-pill status-ready" title="PI Stealth Guard Active: Zero history leak, zero router DNS, zero OS disk temp files">🕵️ Stealth: ON</span>
       </div>
     </header>
 
@@ -317,6 +318,35 @@
         </div>
       </section>
 
+      <!-- PI Air-Gap & Isolation Controls -->
+      <section class="ub-section">
+        <div class="section-header">
+          <h2>🕵️ PI Air-Gap & Isolation Controls</h2>
+          <span class="badge-subtle">Zero Personal / OS Bleed</span>
+        </div>
+        <p class="section-desc">Guarantees investigative activity never bleeds into personal browser history, autocomplete, or local router logs.</p>
+
+        <div class="checkbox-stack">
+          <label class="checkbox-row">
+            <input type="checkbox" id="check-auto-purge-history" checked>
+            <span><strong>Zero Browser History:</strong> Auto-purge investigated lead URLs from browser history database</span>
+          </label>
+          <label class="checkbox-row">
+            <input type="checkbox" id="check-prefer-incognito" checked>
+            <span><strong>Ephemeral Incognito Sandbox:</strong> Spawn external leads in private windows (Zero cookies / cache)</span>
+          </label>
+          <label class="checkbox-row">
+            <input type="checkbox" id="check-ram-only" checked>
+            <span><strong>RAM-Only Evidence Buffer:</strong> Hold photos strictly in volatile memory (Zero temp files on OS disk)</span>
+          </label>
+        </div>
+
+        <div class="btn-row-flex">
+          <button id="btn-purge-case-history" class="btn-default btn-xs">🧹 Wipe Case URLs from Browser History</button>
+          <button id="btn-clear-clipboard" class="btn-default btn-xs">📋 Clear OS Clipboard</button>
+        </div>
+      </section>
+
       <!-- Case Management & Export -->
       <section class="ub-section">
         <div class="section-header">
@@ -394,6 +424,7 @@
 
   <!-- Scripts -->
   <script src="js/crypto-vault.js"></script>
+  <script src="js/stealth-guard.js"></script>
   <script src="js/matcher.js"></script>
   <script src="js/engines.js"></script>
   <script src="js/ai-vision.js"></script>

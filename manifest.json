@@ -8,7 +8,8 @@
     "storage",
     "contextMenus",
     "tabs",
-    "activeTab"
+    "activeTab",
+    "history"
   ],
   "optional_permissions": [
     "proxy"
