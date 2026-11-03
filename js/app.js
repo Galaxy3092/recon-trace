@@ -73,10 +73,31 @@ document.addEventListener('DOMContentLoaded', async () => {
   const customEngUrl = document.getElementById('custom-eng-url');
 
   // Tab 3: API Elements
-  const apiGeminiKey = document.getElementById('api-gemini-key');
-  const apiModelSelect = document.getElementById('api-model-select');
+  const apiProviderSelect = document.getElementById('api-provider-select');
+  const apiCustomEndpointGroup = document.getElementById('api-custom-endpoint-group');
   const apiCustomEndpoint = document.getElementById('api-custom-endpoint');
+  const apiModelSelect = document.getElementById('api-model-select');
+  const apiFetchStatus = document.getElementById('api-fetch-status');
+  const apiKeyInput = document.getElementById('api-key-input');
+  const apiGeminiKey = document.getElementById('api-gemini-key');
+  const btnToggleKeyVisibility = document.getElementById('btn-toggle-key-visibility');
+  const keyEyeIcon = document.getElementById('key-eye-icon');
   const btnSaveApiSettings = document.getElementById('btn-save-api-settings');
+  const btnTestApi = document.getElementById('btn-test-api');
+  const btnDeleteApi = document.getElementById('btn-delete-api');
+  const btnResetAllApi = document.getElementById('btn-reset-all-api');
+  const apiStatusMsg = document.getElementById('api-status-msg');
+  const activeProviderBadge = document.getElementById('active-provider-badge');
+  const apiConnectionBox = document.getElementById('api-connection-box');
+  const apiConnectionDot = document.getElementById('api-connection-dot');
+  const apiConnectionTitle = document.getElementById('api-connection-title');
+  const apiConnectionDesc = document.getElementById('api-connection-desc');
+  const apiConnectionBadge = document.getElementById('api-connection-badge');
+  const metricProvider = document.getElementById('metric-provider');
+  const metricModel = document.getElementById('metric-model');
+  const metricLatency = document.getElementById('metric-latency');
+  const metricTokens = document.getElementById('metric-tokens');
+  const metricDetails = document.getElementById('metric-details');
 
   // Tab 4: Settings Elements
   const torHostInput = document.getElementById('tor-host');
@@ -511,6 +532,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     const analysis = await ReconVision.analyzeImage(state.targetImgSrc, 'stolen_or_missing');
     state.dorks = analysis.searchDorks || [];
+
+    if (typeof ReconVision !== 'undefined' && typeof updateApiMetricsUI === 'function') {
+      ReconVision.getSettings().then(s => {
+        apiSettingsCache = s;
+        updateApiMetricsUI();
+      });
+    }
 
     renderDorks();
   }
@@ -1007,23 +1035,354 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 
   // ==========================================
-  // Tab 3: API Settings
+  // Tab 3: AI Provider & Auto-Fetch Engine
   // ==========================================
+  let apiSettingsCache = null;
+  let apiFetchAbortController = null;
+  let apiKeyDebounceTimer = null;
+
   async function loadStoredApiSettings() {
-    const s = await ReconVision.getSettings();
-    if (s.geminiApiKey) apiGeminiKey.value = s.geminiApiKey;
-    if (s.model) apiModelSelect.value = s.model;
-    if (s.customEndpoint) apiCustomEndpoint.value = s.customEndpoint;
+    apiSettingsCache = await ReconVision.getSettings();
+    setupApiEventHandlers();
+    syncApiUI();
+    const provider = apiSettingsCache.activeProvider || 'Google Gemini';
+    await autoFetchApiModels(provider);
   }
 
-  btnSaveApiSettings.addEventListener('click', async () => {
-    await ReconVision.saveSettings({
-      geminiApiKey: apiGeminiKey.value.trim(),
-      model: apiModelSelect.value,
-      customEndpoint: apiCustomEndpoint.value.trim()
+  function syncApiUI() {
+    if (!apiSettingsCache) return;
+    const provider = apiSettingsCache.activeProvider || 'Google Gemini';
+    const pConfig = apiSettingsCache.providers[provider] || {};
+    const key = pConfig.apiKey || '';
+    const endpoint = pConfig.endpoint || '';
+    const model = pConfig.model || '';
+    const isCustom = provider === 'Custom / Local (Ollama, LM Studio)';
+
+    if (apiProviderSelect) apiProviderSelect.value = provider;
+    if (apiKeyInput) apiKeyInput.value = key;
+    if (apiGeminiKey) apiGeminiKey.value = (provider === 'Google Gemini') ? key : (apiSettingsCache.geminiApiKey || '');
+
+    if (apiCustomEndpointGroup) {
+      apiCustomEndpointGroup.style.display = isCustom ? 'block' : 'none';
+    }
+    if (apiCustomEndpoint && endpoint) {
+      apiCustomEndpoint.value = endpoint;
+    }
+
+    // Active Provider Badge
+    if (activeProviderBadge) {
+      activeProviderBadge.textContent = model ? (provider.replace('Google ', '') + ': ' + model) : provider;
+    }
+
+    // Connection Box Status
+    const requiresKey = ReconVision.PROVIDER_DEFAULTS[provider]?.requiresKey !== false;
+    const isReady = requiresKey ? (key.trim().length > 0 && model) : (model.length > 0 || isCustom);
+
+    if (apiConnectionBox) {
+      if (isReady && model) {
+        apiConnectionBox.classList.add('connected');
+        if (apiConnectionTitle) apiConnectionTitle.textContent = 'Active Model: ' + model;
+        if (apiConnectionDesc) {
+          apiConnectionDesc.textContent = key
+            ? 'Provider: ' + provider + ' • Key configured • Ready for forensic vision.'
+            : 'Provider: ' + provider + ' • Local / Keyless mode • Ready for forensic vision.';
+        }
+        if (apiConnectionBadge) apiConnectionBadge.textContent = 'READY';
+      } else {
+        apiConnectionBox.classList.remove('connected');
+        if (apiConnectionTitle) apiConnectionTitle.textContent = 'Standby: ' + provider;
+        if (apiConnectionDesc) {
+          apiConnectionDesc.textContent = requiresKey
+            ? 'Enter API key or select a model to auto-configure.'
+            : 'Ensure your local server (Ollama/LM Studio) is running on ' + (endpoint || 'localhost:11434');
+        }
+        if (apiConnectionBadge) apiConnectionBadge.textContent = 'STANDBY';
+      }
+    }
+
+    updateApiMetricsUI();
+  }
+
+  function updateApiMetricsUI() {
+    if (!apiSettingsCache) return;
+    const provider = apiSettingsCache.activeProvider || 'Google Gemini';
+    const model = apiSettingsCache.providers[provider]?.model || apiSettingsCache.model || '—';
+    const m = apiSettingsCache.liveMetrics || {};
+
+    if (metricProvider) metricProvider.textContent = provider;
+    if (metricModel) metricModel.textContent = model;
+    if (metricLatency) metricLatency.textContent = m.lastLatencyMs !== null ? (m.lastLatencyMs + ' ms') : '—';
+    if (metricTokens) metricTokens.textContent = m.lastTokens !== null ? (m.lastTokens + ' tokens') : '—';
+    if (metricDetails && m.details) metricDetails.textContent = m.details;
+  }
+
+  async function autoFetchApiModels(provider) {
+    if (!apiSettingsCache) return;
+    const pConfig = apiSettingsCache.providers[provider] || {};
+    const key = pConfig.apiKey || '';
+    const endpoint = pConfig.endpoint || '';
+
+    if (apiFetchStatus) {
+      apiFetchStatus.textContent = 'Auto-fetching models...';
+      apiFetchStatus.style.color = '#3b82f6';
+    }
+
+    if (apiFetchAbortController) {
+      apiFetchAbortController.abort();
+    }
+    apiFetchAbortController = new AbortController();
+
+    try {
+      const models = await ReconVision.fetchModelsFromEndpoint(provider, key, endpoint, apiFetchAbortController.signal);
+
+      if (models && models.length > 0) {
+        pConfig.models = models;
+        renderApiModelDropdown(provider, models);
+
+        if (apiFetchStatus) {
+          apiFetchStatus.textContent = '✓ ' + models.length + ' models fetched';
+          apiFetchStatus.style.color = '#22c55e';
+        }
+      } else {
+        renderApiModelDropdown(provider, []);
+        if (apiFetchStatus) {
+          const reqKey = ReconVision.PROVIDER_DEFAULTS[provider]?.requiresKey !== false;
+          apiFetchStatus.textContent = reqKey ? 'Enter key to fetch' : 'No models returned';
+          apiFetchStatus.style.color = 'var(--ub-text-dim)';
+        }
+      }
+    } catch (err) {
+      if (err.name === 'AbortError') return;
+      console.warn('Could not auto-fetch models for ' + provider + ':', err);
+      renderApiModelDropdown(provider, pConfig.models || []);
+      if (apiFetchStatus) {
+        apiFetchStatus.textContent = 'Offline / Standby';
+        apiFetchStatus.style.color = 'var(--ub-text-dim)';
+      }
+    }
+    syncApiUI();
+  }
+
+  function renderApiModelDropdown(provider, modelsList) {
+    if (!apiModelSelect) return;
+    apiModelSelect.innerHTML = '';
+
+    const pConfig = apiSettingsCache.providers[provider] || {};
+    let savedModel = pConfig.model || '';
+
+    if (!savedModel && modelsList.length > 0) {
+      savedModel = modelsList[0];
+      pConfig.model = savedModel;
+    }
+
+    if (modelsList.length === 0) {
+      const opt = document.createElement('option');
+      opt.value = '';
+      const reqKey = ReconVision.PROVIDER_DEFAULTS[provider]?.requiresKey !== false;
+      opt.textContent = reqKey
+        ? '(Add API key to auto-fetch live models)'
+        : '(Ensure local endpoint is running to auto-fetch models)';
+      apiModelSelect.appendChild(opt);
+    } else {
+      modelsList.forEach(m => {
+        const opt = document.createElement('option');
+        opt.value = m;
+        opt.textContent = m;
+        if (m === savedModel) opt.selected = true;
+        apiModelSelect.appendChild(opt);
+      });
+    }
+  }
+
+  function setupApiEventHandlers() {
+    if (!apiProviderSelect) return;
+
+    // Provider Changed
+    apiProviderSelect.addEventListener('change', async () => {
+      const p = apiProviderSelect.value;
+      apiSettingsCache.activeProvider = p;
+      syncApiUI();
+      await autoFetchApiModels(p);
+      await ReconVision.saveSettings(apiSettingsCache);
     });
-    alert('API Settings saved securely in local storage.');
-  });
+
+    // Model Changed
+    if (apiModelSelect) {
+      apiModelSelect.addEventListener('change', async () => {
+        const p = apiSettingsCache.activeProvider;
+        if (apiSettingsCache.providers[p]) {
+          apiSettingsCache.providers[p].model = apiModelSelect.value;
+          syncApiUI();
+          await ReconVision.saveSettings(apiSettingsCache);
+        }
+      });
+    }
+
+    // Custom Endpoint Changed
+    if (apiCustomEndpoint) {
+      apiCustomEndpoint.addEventListener('input', () => {
+        const p = apiSettingsCache.activeProvider;
+        if (apiSettingsCache.providers[p]) {
+          apiSettingsCache.providers[p].endpoint = apiCustomEndpoint.value.trim();
+        }
+      });
+    }
+
+    // Key Input (Debounced)
+    if (apiKeyInput) {
+      apiKeyInput.addEventListener('input', () => {
+        clearTimeout(apiKeyDebounceTimer);
+        apiKeyDebounceTimer = setTimeout(async () => {
+          const p = apiSettingsCache.activeProvider;
+          const val = apiKeyInput.value.trim();
+          if (apiSettingsCache.providers[p]) {
+            apiSettingsCache.providers[p].apiKey = val;
+            if (p === 'Google Gemini' && apiGeminiKey) {
+              apiGeminiKey.value = val;
+            }
+          }
+          await autoFetchApiModels(p);
+          await ReconVision.saveSettings(apiSettingsCache);
+        }, 500);
+      });
+    }
+
+    // Toggle Password Visibility
+    if (btnToggleKeyVisibility && apiKeyInput) {
+      btnToggleKeyVisibility.addEventListener('click', () => {
+        if (apiKeyInput.type === 'password') {
+          apiKeyInput.type = 'text';
+          if (keyEyeIcon) {
+            keyEyeIcon.innerHTML = '<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line>';
+          }
+        } else {
+          apiKeyInput.type = 'password';
+          if (keyEyeIcon) {
+            keyEyeIcon.innerHTML = '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle>';
+          }
+        }
+      });
+    }
+
+    // Save Settings Button
+    if (btnSaveApiSettings) {
+      btnSaveApiSettings.addEventListener('click', async () => {
+        const p = apiSettingsCache.activeProvider;
+        if (apiKeyInput && apiSettingsCache.providers[p]) {
+          apiSettingsCache.providers[p].apiKey = apiKeyInput.value.trim();
+        }
+        if (apiCustomEndpoint && apiSettingsCache.providers[p]) {
+          apiSettingsCache.providers[p].endpoint = apiCustomEndpoint.value.trim();
+        }
+        if (apiModelSelect && apiSettingsCache.providers[p]) {
+          apiSettingsCache.providers[p].model = apiModelSelect.value;
+        }
+
+        await ReconVision.saveSettings(apiSettingsCache);
+        if (apiStatusMsg) {
+          apiStatusMsg.textContent = '✓ Settings saved securely for ' + p;
+          apiStatusMsg.className = 'api-key-status success';
+        }
+        syncApiUI();
+        await autoFetchApiModels(p);
+      });
+    }
+
+    // Refresh & Test Button
+    if (btnTestApi) {
+      btnTestApi.addEventListener('click', async () => {
+        const p = apiSettingsCache.activeProvider;
+        const pConfig = apiSettingsCache.providers[p] || {};
+        const key = apiKeyInput ? apiKeyInput.value.trim() : (pConfig.apiKey || '');
+        const endpoint = apiCustomEndpoint ? apiCustomEndpoint.value.trim() : (pConfig.endpoint || '');
+        let model = apiModelSelect ? apiModelSelect.value : (pConfig.model || '');
+
+        if (apiStatusMsg) {
+          apiStatusMsg.textContent = 'Testing connection to ' + p + '...';
+          apiStatusMsg.className = 'api-key-status info';
+        }
+
+        await autoFetchApiModels(p);
+        model = (apiModelSelect && apiModelSelect.value) ? apiModelSelect.value : (pConfig.model || '');
+
+        if (!model) {
+          if (apiStatusMsg) {
+            apiStatusMsg.textContent = 'No active model detected. Please ensure your endpoint is reachable.';
+            apiStatusMsg.className = 'api-key-status error';
+          }
+          return;
+        }
+
+        try {
+          const res = await ReconVision.testConnection(p, model, key, endpoint);
+          if (apiStatusMsg) {
+            apiStatusMsg.textContent = '✓ Connected! ' + model + ' responded in ' + res.latencyMs + 'ms.';
+            apiStatusMsg.className = 'api-key-status success';
+          }
+          apiSettingsCache.liveMetrics = {
+            lastLatencyMs: res.latencyMs,
+            lastTokens: res.tokens,
+            details: 'Connection verified: ' + res.latencyMs + 'ms from ' + model
+          };
+          await ReconVision.saveSettings(apiSettingsCache);
+          syncApiUI();
+        } catch (err) {
+          if (apiStatusMsg) {
+            apiStatusMsg.textContent = 'Connection test failed: ' + err.message;
+            apiStatusMsg.className = 'api-key-status error';
+          }
+        }
+      });
+    }
+
+    // Clear Button
+    if (btnDeleteApi) {
+      btnDeleteApi.addEventListener('click', async () => {
+        const p = apiSettingsCache.activeProvider;
+        if (apiSettingsCache.providers[p]) {
+          apiSettingsCache.providers[p].apiKey = '';
+          apiSettingsCache.providers[p].model = ReconVision.PROVIDER_DEFAULTS[p]?.defaultModel || '';
+          apiSettingsCache.providers[p].models = [];
+        }
+        if (apiKeyInput) apiKeyInput.value = '';
+        if (apiStatusMsg) {
+          apiStatusMsg.textContent = 'Cleared configurations for ' + p;
+          apiStatusMsg.className = 'api-key-status info';
+        }
+        await ReconVision.saveSettings(apiSettingsCache);
+        syncApiUI();
+        await autoFetchApiModels(p);
+      });
+    }
+
+    // Reset All Button
+    if (btnResetAllApi) {
+      btnResetAllApi.addEventListener('click', async () => {
+        if (!confirm('Reset all AI provider keys, models, and custom endpoints to defaults?')) return;
+        Object.keys(ReconVision.PROVIDER_DEFAULTS).forEach(prov => {
+          apiSettingsCache.providers[prov] = {
+            apiKey: '',
+            model: ReconVision.PROVIDER_DEFAULTS[prov].defaultModel,
+            endpoint: ReconVision.PROVIDER_DEFAULTS[prov].endpoint,
+            models: []
+          };
+        });
+        apiSettingsCache.activeProvider = 'Google Gemini';
+        apiSettingsCache.liveMetrics = {
+          lastLatencyMs: null,
+          lastTokens: null,
+          details: 'All settings reset. Ready to auto-fetch.'
+        };
+        await ReconVision.saveSettings(apiSettingsCache);
+        if (apiStatusMsg) {
+          apiStatusMsg.textContent = '✓ All provider settings wiped and restored to defaults.';
+          apiStatusMsg.className = 'api-key-status info';
+        }
+        syncApiUI();
+        await autoFetchApiModels('Google Gemini');
+      });
+    }
+  }
 
   // ==========================================
   // Tab 4: Settings & OPSEC Handlers

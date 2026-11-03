@@ -231,33 +231,116 @@
     <div id="tab-api" class="tab-page hidden">
       <section class="ub-section">
         <div class="section-header">
-          <h2>API & Vision Intelligence</h2>
+          <h2>AI Provider &amp; Auto-Fetched Models</h2>
+          <span class="active-badge" id="active-provider-badge">Auto-Fetching</span>
         </div>
-        <p class="section-desc">Optionally enhance investigation queries with free Gemini Vision AI to automatically read serial numbers, identify clothing, and extract distinguishing marks.</p>
+        <p class="section-desc">Choose any AI provider or local offline inference engine (Ollama, LM Studio) to automatically extract forensic marks, OCR numbers, and investigative search dorks.</p>
 
+        <!-- Provider Selection -->
         <div class="form-group">
-          <label class="form-title">Google Gemini API Key (Free Tier Supported):</label>
-          <input type="password" id="api-gemini-key" placeholder="AIzaSy... (Stored locally encrypted in Vault)">
-          <span class="field-note">Used strictly for client-side visual forensic extraction. Zero telemetry.</span>
-        </div>
-
-        <div class="form-group">
-          <label class="form-title">Vision Model Selection:</label>
-          <select id="api-model-select">
-            <option value="gemini-2.0-flash">Gemini 2.0 Flash (Fast & Free)</option>
-            <option value="gemini-1.5-flash">Gemini 1.5 Flash</option>
-            <option value="gemini-1.5-pro">Gemini 1.5 Pro (Deep Multimodal Analysis)</option>
+          <label class="form-title" for="api-provider-select">Provider / Service:</label>
+          <select id="api-provider-select">
+            <option value="Google Gemini">Google Gemini (Free tier available)</option>
+            <option value="OpenRouter">OpenRouter (Multimodal &amp; Free Models)</option>
+            <option value="Custom / Local (Ollama, LM Studio)">Custom / Local (Ollama, LM Studio - Keyless)</option>
+            <option value="Groq">Groq (Ultra-Fast Vision)</option>
+            <option value="OpenAI">OpenAI (GPT-4o, GPT-4o-mini)</option>
+            <option value="Anthropic">Anthropic (Claude 3.5 Sonnet / Haiku)</option>
+            <option value="Mistral">Mistral AI (Pixtral Vision)</option>
+            <option value="Cohere">Cohere (Command R / Command R+)</option>
+            <option value="Perplexity">Perplexity (Sonar)</option>
           </select>
         </div>
 
-        <div class="form-group">
-          <label class="form-title">Custom OSINT Vision Endpoint (Optional):</label>
-          <input type="text" id="api-custom-endpoint" placeholder="https://api.your-org.com/v1/vision">
+        <!-- Custom Endpoint (For Ollama, LM Studio, or custom proxies) -->
+        <div class="form-group" id="api-custom-endpoint-group" style="display: none;">
+          <label class="form-title" for="api-custom-endpoint">API Endpoint URL:</label>
+          <input type="text" id="api-custom-endpoint" placeholder="http://localhost:11434/v1/chat/completions">
+          <span class="field-note">For local inference servers (Ollama, LM Studio, LocalAI) or custom proxies.</span>
         </div>
 
-        <div class="btn-row-right">
-          <button id="btn-save-api-settings" class="btn-action btn-sm">Save API Settings</button>
+        <!-- Auto-Fetched Model Selection Dropdown -->
+        <div class="form-group">
+          <div class="model-selection-header">
+            <label class="form-title" for="api-model-select">Model (Auto-Fetched Live):</label>
+            <span class="fetch-status-indicator" id="api-fetch-status">Checking models...</span>
+          </div>
+          <select id="api-model-select">
+            <option value="">Auto-fetching available models...</option>
+          </select>
         </div>
+
+        <!-- API Key Input with Visibility Toggle (Optional / Keyless for Local) -->
+        <div class="form-group">
+          <label class="form-title" for="api-key-input">API Key (Optional / Keyless for Local):</label>
+          <div class="password-input-wrapper">
+            <input type="password" id="api-key-input" placeholder="Paste your API key (leave empty for local models)..." autocomplete="off">
+            <input type="hidden" id="api-gemini-key">
+            <button type="button" class="btn-toggle-visibility" id="btn-toggle-key-visibility" title="Show/Hide API key">
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" id="key-eye-icon">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                <circle cx="12" cy="12" r="3"></circle>
+              </svg>
+            </button>
+          </div>
+          <span class="field-note">Stored locally encrypted in Cryptographic Vault. Leave blank for local Ollama / LM Studio.</span>
+        </div>
+
+        <!-- Action Buttons Row -->
+        <div class="btn-actions-row">
+          <button type="button" class="btn-action btn-sm" id="btn-save-api-settings">Save Settings</button>
+          <button type="button" class="btn-default btn-sm" id="btn-test-api" title="Test connection and re-fetch models">
+            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"></path>
+            </svg>
+            Refresh &amp; Test
+          </button>
+          <button type="button" class="btn-default btn-sm" id="btn-delete-api" title="Clear settings for this provider">Clear</button>
+          <button type="button" class="btn-default btn-sm" id="btn-reset-all-api" title="Reset all API configurations">Reset All</button>
+        </div>
+
+        <div class="api-key-status" id="api-status-msg"></div>
+      </section>
+
+      <!-- Connection Status Box -->
+      <section class="ub-section">
+        <div class="connection-box" id="api-connection-box">
+          <div class="connection-box-left">
+            <div class="connection-dot" id="api-connection-dot"></div>
+            <div class="connection-info">
+              <div class="connection-title" id="api-connection-title">Standby</div>
+              <div class="connection-desc" id="api-connection-desc">Select provider or enter key to auto-fetch models.</div>
+            </div>
+          </div>
+          <div class="connection-badge" id="api-connection-badge">STANDBY</div>
+        </div>
+      </section>
+
+      <!-- Live Real-Time Metrics -->
+      <section class="ub-section">
+        <div class="section-header">
+          <h2>⚡ Live Response Metrics</h2>
+          <span class="badge-subtle" id="api-metrics-pill">Real-Time</span>
+        </div>
+        <div class="live-metrics-grid">
+          <div class="metric-box">
+            <div class="metric-label">Active Provider</div>
+            <div class="metric-val" id="metric-provider">—</div>
+          </div>
+          <div class="metric-box">
+            <div class="metric-label">Active Model</div>
+            <div class="metric-val font-mono" id="metric-model">—</div>
+          </div>
+          <div class="metric-box">
+            <div class="metric-label">Last Latency</div>
+            <div class="metric-val" id="metric-latency">—</div>
+          </div>
+          <div class="metric-box">
+            <div class="metric-label">Tokens Returned</div>
+            <div class="metric-val" id="metric-tokens">—</div>
+          </div>
+        </div>
+        <p class="field-note" id="metric-details" style="margin-top: 8px;">No requests sent yet. Real-time metrics will appear here.</p>
       </section>
     </div>
 

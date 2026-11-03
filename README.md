@@ -45,9 +45,12 @@ When searching for missing loved ones, victims of trafficking, or stolen propert
      * ☑️ **Stolen Property & Marketplaces (3/3):** eBay, Craigslist, BikeIndex
    * **My Custom Filters:** Add custom police database or auction search templates with `{query}` or `{img_url}`.
 
-3. **API (External Intelligence):**
-   * Connect optional free Google Gemini Vision API key for automated clothing, tattoo, OCR, and dork extraction.
-   * Encrypted at rest in the local cryptographic vault.
+3. **API (Multi-Provider Intelligence & Auto-Fetched Models):**
+   * **Multi-Provider Flexibility:** Connect to **Google Gemini**, **OpenRouter**, **Groq**, **OpenAI**, **Anthropic**, **Mistral**, **Cohere**, or **Perplexity**.
+   * **Keyless Local AI & Privacy Mode:** Seamless zero-telemetry local inference using **Ollama** (`http://localhost:11434/v1`) or **LM Studio** (`http://localhost:1234/v1`) without needing an API key or sending data outside your machine.
+   * **Live Auto-Fetched Models:** Dynamic connection to selected provider endpoints that automatically queries and loads the live model catalog (no manual guessing or forced keys).
+   * **Real-Time Response Metrics & Connection Testing:** Round-trip latency (<kbd>ms</kbd>), token count, and connection health diagnostics.
+   * **Encrypted at Rest:** API keys stored locally inside the AES-256-GCM cryptographic vault. Zero telemetry.
 
 4. **Settings (OPSEC & Air-Gap Controls):**
    * **Zero-Knowledge Cryptographic Vault:** AES-256-GCM + PBKDF2 (600k iterations).
@@ -80,7 +83,7 @@ When searching for missing loved ones, victims of trafficking, or stolen propert
 
 1. Clone this repository:
    ```bash
-   git clone https://github.com/your-username/recon-trace.git
+   git clone https://github.com/Galaxy3092/recon-trace.git
    ```
 2. Open your browser and navigate to:
    * Chrome / Brave: `chrome://extensions/`
@@ -128,19 +131,6 @@ python3 tests/audit.py
   🟢 Dork Stealth Routing: Darknet indexer clicks routed through Stealth Guard to prevent browser history leakage.
 
 🏆 ALL 14/14 ADVANCED OPSEC, ANTI-INTERCEPTION & PI AIR-GAP AUDITS PASSED 100%!
-```
-
----
-
-## 📤 Publishing to GitHub
-
-To push this repository to your personal or organization GitHub account:
-
-```bash
-cd recon-trace
-git remote add origin https://github.com/<your-username>/recon-trace.git
-git branch -M main
-git push -u origin main
 ```
 
 ---

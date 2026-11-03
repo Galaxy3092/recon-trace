@@ -1083,6 +1083,209 @@ input[type="range"]::-webkit-slider-thumb {
   margin-top: 6px;
 }
 
+/* ==========================================
+   TAB 3: AI Provider Engine & Live Metrics
+   ========================================== */
+.active-badge {
+  font-size: 10px;
+  font-family: var(--font-mono);
+  background: var(--ub-red-subtle);
+  color: var(--ub-red-light);
+  border: 1px solid var(--ub-red-dark);
+  padding: 2px 7px;
+  border-radius: var(--radius);
+  font-weight: 600;
+  letter-spacing: 0.3px;
+}
+
+.password-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.password-input-wrapper input {
+  width: 100%;
+  padding-right: 32px;
+}
+
+.btn-toggle-visibility {
+  position: absolute;
+  right: 6px;
+  background: transparent;
+  border: none;
+  color: var(--ub-text-dim);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+}
+
+.btn-toggle-visibility:hover {
+  color: var(--ub-text);
+}
+
+.model-selection-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2px;
+}
+
+.fetch-status-indicator {
+  font-size: 10.5px;
+  font-family: var(--font-mono);
+  color: var(--ub-text-dim);
+}
+
+.btn-actions-row {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+
+.api-key-status {
+  font-size: 11.5px;
+  min-height: 1.3em;
+  margin-top: 8px;
+  line-height: 1.4;
+  transition: color 0.2s;
+}
+
+.api-key-status.success {
+  color: #22c55e;
+}
+
+.api-key-status.error {
+  color: #ef4444;
+}
+
+.api-key-status.info {
+  color: #3b82f6;
+}
+
+/* Connection Status Box */
+.connection-box {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--ub-bg-input);
+  border: 1px solid var(--ub-border);
+  border-radius: var(--radius);
+  padding: 9px 12px;
+  position: relative;
+  overflow: hidden;
+  transition: border-color 0.25s;
+}
+
+.connection-box::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: #ef4444;
+  transition: background 0.3s;
+}
+
+.connection-box.connected::before {
+  background: #22c55e;
+}
+
+.connection-box.connected {
+  border-color: rgba(34, 197, 94, 0.35);
+}
+
+.connection-box-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.connection-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #ef4444;
+  flex-shrink: 0;
+  box-shadow: 0 0 6px rgba(239, 68, 68, 0.5);
+  transition: background 0.3s, box-shadow 0.3s;
+}
+
+.connection-box.connected .connection-dot {
+  background: #22c55e;
+  box-shadow: 0 0 8px rgba(34, 197, 94, 0.7);
+}
+
+.connection-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ub-text);
+  line-height: 1.2;
+}
+
+.connection-desc {
+  font-size: 11px;
+  color: var(--ub-text-dim);
+  margin-top: 2px;
+}
+
+.connection-badge {
+  font-size: 10px;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  letter-spacing: 0.05em;
+  padding: 3px 8px;
+  border-radius: 2px;
+  background: rgba(239, 68, 68, 0.14);
+  color: #ef4444;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  flex-shrink: 0;
+  transition: all 0.25s;
+}
+
+.connection-box.connected .connection-badge {
+  background: rgba(34, 197, 94, 0.15);
+  color: #22c55e;
+  border-color: rgba(34, 197, 94, 0.35);
+}
+
+/* Live Metrics Grid */
+.live-metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.metric-box {
+  background: var(--ub-bg-input);
+  border: 1px solid var(--ub-border);
+  border-radius: var(--radius);
+  padding: 6px 9px;
+}
+
+.metric-label {
+  font-size: 10px;
+  color: var(--ub-text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 2px;
+}
+
+.metric-val {
+  font-size: 12px;
+  font-weight: 600;
+  color: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 /* Utility */
 .hidden {
   display: none !important;
